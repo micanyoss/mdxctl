@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: false;
+}
+
+/*
+ * "mdxctl" — a warm, beige take on daisyUI's cupcake: paper-coloured surfaces,
+ * terracotta primary, dusty teal secondary and honey accents.
+ */
+@plugin "daisyui/theme" {
+  name: "mdxctl";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(96.5% 0.014 84);
+  --color-base-200: oklch(93.4% 0.02 82);
+  --color-base-300: oklch(88.6% 0.028 80);
+  --color-base-content: oklch(29% 0.028 62);
+
+  --color-primary: oklch(57% 0.121 45);
+  --color-primary-content: oklch(97.5% 0.012 84);
+  --color-secondary: oklch(72% 0.062 190);
+  --color-secondary-content: oklch(27% 0.04 195);
+  --color-accent: oklch(84% 0.109 78);
+  --color-accent-content: oklch(35% 0.078 55);
+  --color-neutral: oklch(31% 0.024 62);
+  --color-neutral-content: oklch(95% 0.016 84);
+
+  --color-info: oklch(68% 0.09 232);
+  --color-info-content: oklch(26% 0.05 240);
+  --color-success: oklch(68% 0.11 152);
+  --color-success-content: oklch(26% 0.05 155);
+  --color-warning: oklch(79% 0.13 78);
+  --color-warning-content: oklch(30% 0.07 55);
+  --color-error: oklch(62% 0.17 25);
+  --color-error-content: oklch(97% 0.012 84);
+
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans:
+    ui-sans-serif, "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "JetBrains Mono", "Cascadia Code", "SF Mono", Menlo, Consolas,
+    monospace;
+}
+
+/* Paper grain: two barely-there warm washes over the base colour. */
+.bg-paper {
+  background-image:
+    radial-gradient(
+      70rem 40rem at 12% -10%,
+      color-mix(in oklch, var(--color-accent) 22%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      55rem 35rem at 105% 0%,
+      color-mix(in oklch, var(--color-secondary) 18%, transparent),
+      transparent 55%
+    );
+  background-attachment: fixed;
+}
+
+/* Hairline used between list rows and panels. */
+.rule {
+  border-color: color-mix(in oklch, var(--color-base-300) 75%, transparent);
+}
+
+::view-transition-group(navbar-brand) {
+  animation-duration: 300ms;
+  animation-timing-function: ease-in-out;
+}
+
+::view-transition-old(navbar-brand),
+::view-transition-new(navbar-brand) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+
+/* --------------------------------------------------------------------------
+   MDX content rhythm
+   -------------------------------------------------------------------------- */
+.mdx-content {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.mdx-content :where(h1) {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+.mdx-content :where(h2) {
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--color-base-300) 70%, transparent);
+}
+.mdx-content :where(h3) {
+  font-size: 1.15rem;
+  font-weight: 650;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+.mdx-content :where(p, ul, ol, pre, table, blockquote) {
+  margin-bottom: 1.1rem;
+}
+.mdx-content :where(ul, ol) {
+  padding-left: 1.5rem;
+  list-style: revert;
+}
+.mdx-content :where(li) {
+  margin-bottom: 0.3rem;
+}
+.mdx-content :where(a) {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+.mdx-content :where(a):hover {
+  text-decoration-thickness: 2px;
+}
+.mdx-content :where(code) {
+  background: color-mix(in oklch, var(--color-base-300) 55%, transparent);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.mdx-content :where(pre) {
+  background: var(--color-neutral);
+  color: var(--color-neutral-content);
+  border-radius: var(--radius-box);
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.mdx-content :where(pre code) {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+.mdx-content :where(blockquote) {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 1rem;
+  font-style: italic;
+  opacity: 0.85;
+}
+.mdx-content :where(hr) {
+  margin: 2rem 0;
+  border-color: color-mix(in oklch, var(--color-base-300) 80%, transparent);
+}
+.mdx-content :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+}
+.mdx-content :where(th, td) {
+  border: 1px solid
+    color-mix(in oklch, var(--color-base-300) 80%, transparent);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.mdx-content :where(th) {
+  background: color-mix(in oklch, var(--color-base-200) 80%, transparent);
+  font-weight: 600;
+}
+.mdx-content :where(img) {
+  border-radius: var(--radius-box);
+}

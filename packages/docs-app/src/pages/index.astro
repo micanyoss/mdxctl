@@ -1,0 +1,138 @@
+---
+import CopyCommand from "../components/CopyCommand.astro";
+import Layout from "../layouts/Layout.astro";
+import { getProjects, shortenPath } from "../lib/projects";
+
+const projects = await getProjects();
+---
+
+<Layout
+  title="mdxctl — projects"
+  description="All docs projects registered with mdxctl on this machine"
+>
+  <Fragment slot="header">
+    <span class="opacity-25">/</span>
+    <span class="truncate font-mono text-sm font-medium">projects</span>
+  </Fragment>
+
+  <main class="mx-auto w-full max-w-5xl px-5 pt-14 pb-20">
+    {
+      projects.length === 0 ? (
+        <section class="mx-auto max-w-xl py-10 text-center">
+          <div class="mx-auto mb-7 grid size-14 place-items-center rounded-box border rule bg-base-100 shadow-sm">
+            <svg
+              class="size-6 text-primary"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 7a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" />
+              <path d="M12 10v5m-2.5-2.5h5" />
+            </svg>
+          </div>
+
+          <h1 class="text-3xl font-bold tracking-tight">
+            Setup mdxctl in your project
+          </h1>
+          <p class="mx-auto mt-3 max-w-md text-[0.95rem] leading-relaxed opacity-65">
+            No projects are registered yet. Run this in any project folder — it
+            creates <span class="font-mono text-[0.85em]">.mdxctl/docs</span> and
+            registers the folder so it shows up here.
+          </p>
+
+          <div class="mt-7 flex justify-center">
+            <CopyCommand command="mdxctl setup" />
+          </div>
+
+          <p class="mt-4 text-xs opacity-45">
+            Click to copy · then restart{" "}
+            <span class="font-mono">mdxctl start</span> and refresh this page
+          </p>
+        </section>
+      ) : (
+        <>
+          <section class="mb-9">
+            <h1 class="text-4xl font-bold tracking-tight">Your projects</h1>
+            <p class="mt-2.5 text-[0.95rem] opacity-60">
+              {projects.length} registered{" "}
+              {projects.length === 1 ? "folder" : "folders"}
+            </p>
+          </section>
+
+          <ul class="grid gap-3.5 sm:grid-cols-2">
+            {projects.map((project) => (
+              <li>
+                <a
+                  href={`/${project.slug}`}
+                  class="group flex h-full flex-col gap-3 rounded-box border rule bg-base-100 p-5 shadow-sm transition duration-150 hover:border-primary hover:shadow-md"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <span class="font-mono text-lg leading-tight font-semibold tracking-tight">
+                      {project.name}
+                    </span>
+                    <span
+                      class:list={[
+                        "shrink-0 rounded-selector px-2 py-0.5 text-[0.7rem] font-medium",
+                        project.pages.length > 0
+                          ? "bg-accent/35 text-accent-content"
+                          : project.linked
+                            ? "bg-base-200 opacity-60"
+                            : "bg-warning/30 text-warning-content",
+                      ]}
+                    >
+                      {project.pages.length > 0
+                        ? `${project.pages.length} ${project.pages.length === 1 ? "doc" : "docs"}`
+                        : project.linked
+                          ? "empty"
+                          : "restart to load"}
+                    </span>
+                  </div>
+
+                  {project.home?.description && (
+                    <p class="line-clamp-2 text-sm leading-relaxed opacity-70">
+                      {project.home.description}
+                    </p>
+                  )}
+
+                  <div class="mt-auto flex items-end justify-between gap-3">
+                    <span
+                      class="truncate font-mono text-[0.7rem] opacity-45"
+                      title={project.path ?? project.slug}
+                    >
+                      {project.path ? shortenPath(project.path) : "linked folder"}
+                    </span>
+                    <span class="flex items-center gap-1 font-mono text-xs text-primary opacity-0 transition group-hover:opacity-100">
+                      /{project.slug}
+                      <svg
+                        class="size-3.5 transition-transform group-hover:translate-x-0.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 12h14m-6-6 6 6-6 6" />
+                      </svg>
+                    </span>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <section class="mt-10 flex flex-wrap items-center gap-x-4 gap-y-3 border-t rule pt-6">
+            <p class="text-sm opacity-60">Add another project</p>
+            <CopyCommand command="mdxctl setup" variant="ghost" />
+            <CopyCommand command="mdxctl add" variant="ghost" />
+          </section>
+        </>
+      )
+    }
+  </main>
+</Layout>

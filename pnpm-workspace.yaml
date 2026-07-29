@@ -1,0 +1,8 @@
+packages:
+  - "packages/*"
+
+# pnpm 11 requires an explicit decision for dependency build scripts.
+# esbuild ships its platform binary via optionalDependencies, so its
+# postinstall is only a validation step and can safely stay disabled.
+allowBuilds:
+  esbuild: false

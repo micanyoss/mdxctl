@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output and framework caches
+dist/
+.astro/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Tests
+coverage/
+
+# mdxctl and Cloudflare local state
+.mdxctl/
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Local environment files; explicit examples remain trackable
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.temp
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini

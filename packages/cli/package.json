@@ -1,0 +1,41 @@
+{
+  "name": "mdxctl",
+  "version": "0.1.0",
+  "description": "Manage and serve MDX docs projects from one place",
+  "type": "module",
+  "bin": {
+    "mdxctl": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup src/cli.ts --format esm --clean",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "mdx",
+    "docs",
+    "cli",
+    "astro"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "citty": "^0.2.2",
+    "gradient-string": "^3.0.0",
+    "log-update": "^8.0.0",
+    "picocolors": "^1.1.1",
+    "portless": "^0.15.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,42 @@
+---
+import type { NavNode } from "../lib/projects";
+
+interface Props {
+  nodes: NavNode[];
+  currentId?: string;
+  depth?: number;
+}
+
+const { nodes, currentId, depth = 0 } = Astro.props;
+---
+
+<ul class:list={["space-y-0.5", depth > 0 && "mt-0.5 ml-3 border-l rule pl-3"]}>
+  {
+    nodes.map((node) =>
+      node.page ? (
+        <li>
+          <a
+            href={node.page.url}
+            aria-current={node.page.id === currentId ? "page" : undefined}
+            class:list={[
+              "block truncate rounded-field px-2.5 py-1.5 text-sm transition",
+              node.page.id === currentId
+                ? "bg-primary/12 font-medium text-primary"
+                : "opacity-70 hover:bg-base-200 hover:opacity-100",
+            ]}
+            title={node.label}
+          >
+            {node.label}
+          </a>
+        </li>
+      ) : (
+        <li class="pt-2.5">
+          <p class="px-2.5 pb-0.5 font-mono text-[0.68rem] tracking-widest uppercase opacity-40">
+            {node.label}
+          </p>
+          <Astro.self nodes={node.children} currentId={currentId} depth={depth + 1} />
+        </li>
+      ),
+    )
+  }
+</ul>

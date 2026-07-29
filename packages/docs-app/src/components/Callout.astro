@@ -1,0 +1,20 @@
+---
+interface Props {
+  type?: "info" | "success" | "warning" | "error";
+}
+
+const { type = "info" } = Astro.props;
+
+const variant: Record<NonNullable<Props["type"]>, string> = {
+  info: "alert-info",
+  success: "alert-success",
+  warning: "alert-warning",
+  error: "alert-error",
+};
+---
+
+<div class:list={["alert my-4", variant[type]]} role="alert">
+  <div>
+    <slot />
+  </div>
+</div>

@@ -1,0 +1,220 @@
+---
+import { render } from "astro:content";
+import DocsNav from "../components/DocsNav.astro";
+import Layout from "../layouts/Layout.astro";
+import { buildNav, getProjects, shortenPath, type DocPage, type Project } from "../lib/projects";
+
+/**
+ * Serves every registered project under its own first URL segment:
+ *   /<project>              → the project's index.mdx (or an overview)
+ *   /<project>/<doc path>   → any other .mdx in that project
+ */
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.flatMap((project) => {
+    const routes = project.pages.map((page) => ({
+      params: { path: page.id },
+      props: { project, page },
+    }));
+    // Projects without an index.mdx still need a landing route.
+    if (!project.home) {
+      routes.push({
+        params: { path: project.slug },
+        props: { project, page: undefined as DocPage | undefined },
+      });
+    }
+    return routes;
+  });
+}
+
+const { project, page } = Astro.props as { project: Project; page?: DocPage };
+
+const nav = buildNav(project.pages);
+const rendered = page ? await render(page.entry) : undefined;
+const Content = rendered?.Content;
+const docsFolder = project.path
+  ? `${project.path}${project.path.includes("\\") ? "\\" : "/"}docs`
+  : "the linked docs folder";
+const title = page
+  ? `${page.title} · ${project.name}`
+  : `${project.name} · mdxctl`;
+---
+
+<Layout title={title} description={page?.description} wide>
+  <Fragment slot="header">
+    <span class="opacity-25">/</span>
+    <a
+      href={`/${project.slug}`}
+      class="truncate font-mono text-sm font-medium hover:text-primary"
+      >{project.name}</a
+    >
+    {
+      page && !page.isHome && (
+        <>
+          <span class="hidden opacity-25 sm:inline">/</span>
+          <span class="hidden truncate text-sm opacity-55 sm:inline">
+            {page.segments.join(" / ")}
+          </span>
+        </>
+      )
+    }
+    <a
+      href="/"
+      class="ml-auto shrink-0 rounded-field px-2.5 py-1 text-xs opacity-55 transition hover:bg-base-200 hover:opacity-100"
+      >all projects</a
+    >
+  </Fragment>
+
+  <div
+    class="mx-auto flex w-full max-w-[100rem] gap-10 px-5 pt-8 pb-14 lg:gap-14"
+  >
+    <aside class="hidden w-60 shrink-0 lg:block">
+      <nav
+        class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1"
+        aria-label={`${project.name} docs`}
+      >
+        <p class="mb-2 px-2.5 font-mono text-[0.68rem] tracking-widest uppercase opacity-40">
+          {project.name}
+        </p>
+        <ul class="space-y-0.5">
+          {
+            project.home && (
+              <li>
+                <a
+                  href={project.home.url}
+                  aria-current={page?.isHome ? "page" : undefined}
+                  class:list={[
+                    "block truncate rounded-field px-2.5 py-1.5 text-sm transition",
+                    page?.isHome
+                      ? "bg-primary/12 font-medium text-primary"
+                      : "opacity-70 hover:bg-base-200 hover:opacity-100",
+                  ]}
+                >
+                  {project.home.title}
+                </a>
+              </li>
+            )
+          }
+        </ul>
+        <DocsNav nodes={nav} currentId={page?.id} />
+        {
+          project.pages.length === 0 && (
+            <p class="px-2.5 text-sm opacity-45">No docs yet</p>
+          )
+        }
+      </nav>
+    </aside>
+
+    <main class="min-w-0 flex-1 pb-4 lg:max-w-3xl">
+      {
+        Content ? (
+          <>
+            <p class="mb-1.5 font-mono text-xs tracking-widest uppercase opacity-40 lg:hidden">
+              {project.name}
+            </p>
+            <article class="mdx-content">
+              <Content />
+            </article>
+          </>
+        ) : project.pages.length > 0 ? (
+          <section>
+            <p class="mb-2 font-mono text-xs tracking-widest uppercase opacity-45">
+              project
+            </p>
+            <h1 class="text-3xl font-bold tracking-tight">{project.name}</h1>
+            <p class="mt-2.5 font-mono text-xs opacity-50">
+              {project.path ? shortenPath(project.path) : "linked folder"}
+            </p>
+            <p class="mt-4 max-w-prose text-[0.95rem] leading-relaxed opacity-65">
+              This project has no <span class="font-mono text-[0.85em]">index.mdx</span>{" "}
+              yet, so here is everything it does contain.
+            </p>
+            <ul class="mt-6 divide-y overflow-hidden rounded-box border rule bg-base-100">
+              {project.pages.map((entry) => (
+                <li>
+                  <a
+                    href={entry.url}
+                    class="flex items-baseline justify-between gap-4 px-4 py-3 transition hover:bg-base-200"
+                  >
+                    <span class="min-w-0">
+                      <span class="block text-sm font-medium">{entry.title}</span>
+                      {entry.description && (
+                        <span class="mt-0.5 block truncate text-xs opacity-55">
+                          {entry.description}
+                        </span>
+                      )}
+                    </span>
+                    <span class="shrink-0 font-mono text-[0.7rem] opacity-40">
+                      {entry.segments.join("/")}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <section class="rounded-box border rule bg-base-100 p-8 shadow-sm">
+            {project.linked ? (
+              <>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  {project.name} has no docs yet
+                </h1>
+                <p class="mt-3 max-w-prose text-[0.95rem] leading-relaxed opacity-65">
+                  Drop an <span class="font-mono text-[0.85em]">index.mdx</span>{" "}
+                  into this folder and it shows up here instantly.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  {project.name} isn't loaded yet
+                </h1>
+                <p class="mt-3 max-w-prose text-[0.95rem] leading-relaxed opacity-65">
+                  This project was registered after the server started. Restart{" "}
+                  <span class="font-mono text-[0.85em]">mdxctl start</span> to serve
+                  its docs from:
+                </p>
+              </>
+            )}
+            <p class="mt-4 rounded-field border rule bg-base-200/50 px-3 py-2 font-mono text-xs break-all opacity-75">
+              {docsFolder}
+            </p>
+            <a
+              href="/"
+              class="mt-6 inline-block text-sm opacity-60 transition hover:text-primary hover:opacity-100"
+            >
+              ← all projects
+            </a>
+          </section>
+        )
+      }
+
+      {
+        page?.isHome && project.pages.length > 1 && (
+          <nav class="mt-14 border-t rule pt-6 lg:hidden" aria-label="Docs in this project">
+            <p class="mb-3 font-mono text-[0.68rem] tracking-widest uppercase opacity-40">
+              In this project
+            </p>
+            <ul class="space-y-1">
+              {project.pages
+                .filter((entry) => !entry.isHome)
+                .map((entry) => (
+                  <li>
+                    <a
+                      href={entry.url}
+                      class="flex items-baseline justify-between gap-3 rounded-field px-2.5 py-2 transition hover:bg-base-200"
+                    >
+                      <span class="text-sm font-medium">{entry.title}</span>
+                      <span class="font-mono text-[0.7rem] opacity-40">
+                        {entry.segments.join("/")}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </nav>
+        )
+      }
+    </main>
+  </div>
+</Layout>

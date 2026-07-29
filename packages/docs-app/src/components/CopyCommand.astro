@@ -1,0 +1,179 @@
+---
+/**
+ * Click-to-copy command pill — same shape and motion as the mdxctl landing
+ * page CTA: neutral pill, copy glyph on the left, mono command, spring hover.
+ */
+interface Props {
+  command: string;
+  /** "solid" is the hero pill; "ghost" is the smaller outlined inline chip. */
+  variant?: "solid" | "ghost";
+  class?: string;
+}
+
+const { command, variant = "solid", class: className = "" } = Astro.props;
+---
+
+<button
+  type="button"
+  class:list={[
+    "copy-command group relative isolate inline-flex max-w-full cursor-pointer items-center text-left",
+    variant === "solid"
+      ? "copy-solid h-12 gap-2.5 px-5 text-neutral-content sm:gap-3 sm:px-6"
+      : "copy-ghost h-9 gap-2 px-4 text-base-content",
+    className,
+  ]}
+  data-command={command}
+  aria-label={`Copy "${command}" to the clipboard`}
+>
+  <span
+    class:list={[
+      "transition-colors",
+      variant === "solid"
+        ? "text-neutral-content/50 group-hover:text-neutral-content"
+        : "opacity-45 group-hover:opacity-90",
+    ]}
+  >
+    <svg
+      class="icon-copy size-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+    <svg
+      class="icon-check hidden size-4 text-success"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  </span>
+  <code
+    class:list={[
+      "min-w-0 font-mono whitespace-nowrap",
+      variant === "solid" ? "text-xs sm:text-sm" : "text-xs",
+    ]}>{command}</code
+  >
+  <span class="sr-only" role="status" data-copy-status></span>
+</button>
+
+<style>
+  .copy-command {
+    transform: translateZ(0);
+    transform-origin: center;
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .copy-command::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    border-radius: 9999px;
+    content: "";
+  }
+
+  .copy-solid::before {
+    background: var(--color-neutral);
+    box-shadow:
+      0 20px 25px -5px color-mix(in srgb, var(--color-neutral) 10%, transparent),
+      0 8px 10px -6px color-mix(in srgb, var(--color-neutral) 10%, transparent);
+  }
+
+  .copy-ghost::before {
+    background: color-mix(in oklch, var(--color-base-100) 85%, transparent);
+    border: 1px solid
+      color-mix(in oklch, var(--color-base-300) 90%, transparent);
+  }
+
+  .copy-command:hover {
+    transform: translateZ(0) scale(1.03);
+  }
+
+  .copy-solid:hover::before {
+    box-shadow:
+      0 25px 35px -8px color-mix(in srgb, var(--color-neutral) 24%, transparent),
+      0 12px 16px -8px color-mix(in srgb, var(--color-neutral) 18%, transparent);
+  }
+
+  .copy-ghost:hover::before {
+    border-color: var(--color-primary);
+  }
+
+  .copy-command:active {
+    transform: translateZ(0) scale(0.97);
+  }
+
+  .copy-command:active::before {
+    filter: brightness(0.92);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .copy-command {
+      transition: transform 200ms ease;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .copy-command:hover,
+    .copy-command:active {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  async function copy(text: string): Promise<boolean> {
+    try {
+      // Available on https://mdxctl.localhost; the fallback covers plain http.
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const field = document.createElement("textarea");
+      field.value = text;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.opacity = "0";
+      document.body.append(field);
+      field.select();
+      const ok = document.execCommand("copy");
+      field.remove();
+      return ok;
+    }
+  }
+
+  document.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      ".copy-command",
+    );
+    if (!button) return;
+
+    const command = button.dataset.command ?? "";
+    const copied = await copy(command);
+    if (!copied) return;
+
+    const iconCopy = button.querySelector(".icon-copy");
+    const iconCheck = button.querySelector(".icon-check");
+    const status = button.querySelector("[data-copy-status]");
+    iconCopy?.classList.add("hidden");
+    iconCheck?.classList.remove("hidden");
+    if (status) status.textContent = `Copied ${command}`;
+
+    window.setTimeout(() => {
+      iconCopy?.classList.remove("hidden");
+      iconCheck?.classList.add("hidden");
+      if (status) status.textContent = "";
+    }, 1600);
+  });
+</script>

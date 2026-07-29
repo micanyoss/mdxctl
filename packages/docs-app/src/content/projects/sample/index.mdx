@@ -1,0 +1,24 @@
+---
+title: Welcome
+description: Sample doc rendered by the mdxctl docs viewer
+---
+
+import Callout from "@components/Callout.astro";
+
+# Welcome to mdxctl
+
+This file lives in the folder pointed at by `MDXCTL_PROJECTS_PATH`. When you run
+the docs-app standalone (like right now), it falls back to the bundled sample
+content under `src/content/projects/`, where every subfolder is treated as a
+project.
+
+<Callout type="info">
+  Edit this MDX file while the dev server is running and the page reloads
+  instantly.
+</Callout>
+
+## What's next
+
+- `mdxctl setup` registers a project and scaffolds a docs folder
+- `mdxctl start` serves every registered project through this app
+- each project is served at `/<name>`, e.g. `https://mdxctl.localhost/sample`
