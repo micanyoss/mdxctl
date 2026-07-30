@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { defineCommand, runMain } from "citty";
+import { showUpdateNotice } from "./utils/update.js";
 import { VERSION } from "./utils/version.js";
 
 const main = defineCommand({
@@ -16,5 +17,11 @@ const main = defineCommand({
     generate: () => import("./commands/generate.js").then((m) => m.default),
   },
 });
+
+const commandNames = new Set(["setup", "start", "add", "remove", "generate"]);
+const command = process.argv[2];
+if (commandNames.has(command)) {
+  await showUpdateNotice();
+}
 
 runMain(main);
