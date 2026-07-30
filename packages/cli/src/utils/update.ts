@@ -93,6 +93,7 @@ export function renderUpdateNotice(latest: string): string {
   return [
     `${pc.yellow("●")} ${pc.bold("Update available")} ${pc.dim(`v${VERSION} -> `)}${accent(`v${latest}`)}`,
     `${pc.dim("  Run")} ${accent("npm install -g mdxctl@latest")}`,
+    `${pc.dim("  Update the skill:")} ${accent("npx skills update")}`,
     "",
   ].join("\n");
 }
