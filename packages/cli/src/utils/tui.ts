@@ -99,7 +99,7 @@ export function renderStatusCard(options: StatusCardOptions): string {
   if (options.projectCount === 0) {
     rows.push(`${pc.dim("Projects")} ${pc.yellow("none registered yet")}`);
     rows.push("");
-    rows.push(`Run ${accent("mdxctl setup")} in a project folder to add one.`);
+    rows.push(`Run ${accent("mdxctl init")} in a project folder to add one.`);
   } else {
     rows.push(
       `${pc.dim("Serving ")} ${pc.white(String(options.projectCount))} ${pc.dim(

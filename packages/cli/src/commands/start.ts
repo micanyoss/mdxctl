@@ -125,6 +125,7 @@ interface LaunchOptions {
 export default defineCommand({
   meta: {
     name: "start",
+    alias: "run",
     description: `Serve every registered project's docs at ${PORTLESS_URL}`,
   },
   args: {
@@ -161,7 +162,7 @@ export default defineCommand({
             (allProjects.length
               ? "\nRegistered projects: " +
                 allProjects.map((proj) => pc.white(proj.name)).join(", ")
-              : `\nRun ${accent("mdxctl setup")} to register your first docs project.`),
+              : `\nRun ${accent("mdxctl init")} to register your first docs project.`),
         );
         process.exit(1);
       }

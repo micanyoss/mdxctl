@@ -10,7 +10,7 @@ const main = defineCommand({
     description: "Manage and serve MDX docs projects from one place",
   },
   subCommands: {
-    setup: () => import("./commands/setup.js").then((m) => m.default),
+    init: () => import("./commands/init.js").then((m) => m.default),
     start: () => import("./commands/start.js").then((m) => m.default),
     add: () => import("./commands/add.js").then((m) => m.default),
     remove: () => import("./commands/remove.js").then((m) => m.default),
@@ -18,7 +18,7 @@ const main = defineCommand({
   },
 });
 
-const commandNames = new Set(["setup", "start", "add", "remove", "generate"]);
+const commandNames = new Set(["init", "start", "run", "add", "remove", "generate"]);
 const command = process.argv[2];
 if (commandNames.has(command)) {
   await showUpdateNotice();

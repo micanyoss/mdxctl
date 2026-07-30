@@ -34,7 +34,7 @@ export async function pickProject(name?: string): Promise<ProjectEntry> {
     console.error(
       pc.red("No projects registered yet.") +
         "\nRun " +
-        accent("mdxctl setup") +
+        accent("mdxctl init") +
         " to register your first docs project.",
     );
     process.exit(1);

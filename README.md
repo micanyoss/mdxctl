@@ -29,7 +29,7 @@ npm install -g mdxctl
 **Setup**
 
 ```bash
-mdxctl setup
+mdxctl init
 ```
 
 **Start**

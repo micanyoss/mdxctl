@@ -18,7 +18,7 @@ export function isCleanProjectName(name: string): boolean {
 
 /**
  * Validation message for a project name, or undefined when it's fine.
- * Shared by `setup` and `add` so both reject the same shapes.
+ * Shared by `init` and `add` so both reject the same shapes.
  */
 export function validateProjectName(name: string): string | undefined {
   if (!name) return "A name is required";

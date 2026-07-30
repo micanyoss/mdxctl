@@ -23,7 +23,7 @@ const DEFAULT_PLANS_DIR = "plans";
 
 export default defineCommand({
   meta: {
-    name: "setup",
+    name: "init",
     description: "Register a project and scaffold .mdxctl/docs and .mdxctl/plans",
   },
   args: {
@@ -39,7 +39,7 @@ export default defineCommand({
     },
   },
   async run({ args }) {
-    p.intro(introChip(" mdxctl setup "));
+    p.intro(introChip(" mdxctl init "));
 
     const cwdName = projectSlug(basename(process.cwd()));
     const name =

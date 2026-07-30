@@ -45,7 +45,7 @@ const projects = await getProjects();
           </p>
 
           <div class="mt-7 flex justify-center">
-            <CopyCommand command="mdxctl setup" />
+            <CopyCommand command="mdxctl init" />
           </div>
 
           <p class="mt-4 text-xs opacity-45">
@@ -128,7 +128,7 @@ const projects = await getProjects();
 
           <section class="mt-10 flex flex-wrap items-center gap-x-4 gap-y-3 border-t rule pt-6">
             <p class="text-sm opacity-60">Add another project</p>
-            <CopyCommand command="mdxctl setup" variant="ghost" />
+            <CopyCommand command="mdxctl init" variant="ghost" />
             <CopyCommand command="mdxctl add" variant="ghost" />
           </section>
         </>
