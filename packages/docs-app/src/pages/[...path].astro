@@ -2,6 +2,7 @@
 import { render } from "astro:content";
 import DocsNav from "../components/DocsNav.astro";
 import Layout from "../layouts/Layout.astro";
+import Search from "../components/Search.astro";
 import { buildNav, getProjects, shortenPath, type DocPage, type Project } from "../lib/projects";
 
 /**
@@ -41,6 +42,8 @@ const title = page
 ---
 
 <Layout title={title} description={page?.description} wide>
+  <Search slot="actions" project={project.slug} label={project.name} />
+
   <Fragment slot="header">
     <span class="opacity-25">/</span>
     <a
@@ -58,11 +61,6 @@ const title = page
         </>
       )
     }
-    <a
-      href="/"
-      class="ml-auto shrink-0 rounded-field px-2.5 py-1 text-xs opacity-55 transition hover:bg-base-200 hover:opacity-100"
-      >all projects</a
-    >
   </Fragment>
 
   <div

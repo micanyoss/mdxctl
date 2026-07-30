@@ -1,0 +1,910 @@
+---
+/**
+ * Header search for docs pages, modelled on fumadocs' dialog.
+ *
+ * The trigger sits next to the theme toggle; ⌘K / Ctrl+K opens it from
+ * anywhere. Results come from an Orama index built in the browser out of
+ * /search-index/<project>.json, which is fetched once on first open and cached
+ * for the session — search stays fully client side, so it works the same under
+ * `astro dev` and a static build with no server to call.
+ *
+ * Records are page/heading/text rows (see lib/search.ts) and are regrouped here
+ * under their owning page, so a match deep in a document still shows where it
+ * lives.
+ */
+interface Props {
+  /** Project whose index this dialog queries. */
+  project: string;
+  /** Shown under the project name in the empty state. */
+  label?: string;
+  class?: string;
+}
+
+const { project, label, class: className = "" } = Astro.props;
+---
+
+<div
+  class:list={["search", className]}
+  data-search
+  data-project={project}
+  data-label={label ?? project}
+>
+  <button type="button" class="search__trigger" data-search-open aria-label="Search docs">
+    <svg
+      class="search__trigger-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7"></circle>
+      <path d="m20 20-3.6-3.6"></path>
+    </svg>
+    <span class="search__trigger-label">Search</span>
+    <kbd class="search__kbd" data-search-hint>⌘K</kbd>
+  </button>
+
+  <dialog class="search__dialog" data-search-dialog aria-label="Search docs">
+    <div class="search__panel">
+      <div class="search__field">
+        <svg
+          class="search__field-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m20 20-3.6-3.6"></path>
+        </svg>
+        <input
+          type="search"
+          class="search__input"
+          data-search-input
+          placeholder="Search docs…"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="go"
+          aria-label="Search docs"
+          aria-controls="search-results"
+          aria-autocomplete="list"
+        />
+        <button type="button" class="search__close" data-search-close aria-label="Close search">
+          <kbd class="search__kbd">esc</kbd>
+        </button>
+      </div>
+
+      <div class="search__results" id="search-results" role="listbox" data-search-results>
+      </div>
+
+      <div class="search__footer">
+        <span class="search__legend"><kbd class="search__kbd">↑</kbd><kbd class="search__kbd">↓</kbd> navigate</span>
+        <span class="search__legend"><kbd class="search__kbd">↵</kbd> open</span>
+        <span class="search__legend search__legend--end">
+          <span data-search-count></span>
+        </span>
+      </div>
+    </div>
+  </dialog>
+</div>
+
+<style>
+  /* --- trigger ------------------------------------------------------------ */
+  .search {
+    display: contents;
+  }
+
+  .search__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.125rem;
+    padding: 0 0.5rem;
+    cursor: pointer;
+    border: 1px solid color-mix(in oklch, var(--color-base-300) 75%, transparent);
+    border-radius: var(--radius-field);
+    background: color-mix(in oklch, var(--color-base-200) 55%, transparent);
+    color: var(--color-base-content);
+    font-size: 0.8125rem;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  :global([data-theme="mdxctl-dark"]) .search__trigger {
+    border-color: var(--color-base-300);
+  }
+
+  .search__trigger:hover {
+    border-color: color-mix(in oklch, var(--color-primary) 55%, transparent);
+    background: color-mix(in oklch, var(--color-base-200) 90%, transparent);
+  }
+
+  .search__trigger:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .search__trigger-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .search__trigger-label {
+    opacity: 0.6;
+  }
+
+  /* Icon-only until there is room for the label and shortcut. */
+  .search__trigger-label,
+  .search__trigger .search__kbd {
+    display: none;
+  }
+
+  @media (min-width: 40rem) {
+    .search__trigger {
+      width: 13rem;
+      padding-left: 0.625rem;
+    }
+
+    .search__trigger-label {
+      display: inline;
+    }
+
+    .search__trigger .search__kbd {
+      display: inline-flex;
+      margin-left: auto;
+    }
+  }
+
+  .search__kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.35rem;
+    height: 1.25rem;
+    padding: 0 0.3rem;
+    border: 1px solid color-mix(in oklch, var(--color-base-300) 85%, transparent);
+    border-radius: 0.3rem;
+    background: color-mix(in oklch, var(--color-base-100) 80%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1;
+    opacity: 0.65;
+  }
+
+  /* --- dialog ------------------------------------------------------------- */
+  .search__dialog {
+    /* <dialog> defaults to a centred box; we want a top-anchored sheet. */
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-base-content);
+    overflow: hidden;
+  }
+
+  .search__dialog::backdrop {
+    background: color-mix(in oklch, oklch(12% 0.01 62) 55%, transparent);
+    backdrop-filter: blur(3px);
+  }
+
+  .search__dialog[open] {
+    display: grid;
+    /* Sits high on the viewport, like a command palette. */
+    align-content: start;
+    justify-items: center;
+    padding: 4.5rem 1rem 1rem;
+  }
+
+  @media (min-width: 40rem) {
+    .search__dialog[open] {
+      padding-top: 6rem;
+    }
+  }
+
+  .search__panel {
+    display: flex;
+    width: 100%;
+    max-width: 36rem;
+    max-height: min(28rem, calc(100vh - 8rem));
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid color-mix(in oklch, var(--color-base-300) 80%, transparent);
+    border-radius: var(--radius-box);
+    background: var(--color-base-100);
+    box-shadow:
+      0 1px 2px color-mix(in oklch, oklch(20% 0.02 62) 8%, transparent),
+      0 12px 40px -8px color-mix(in oklch, oklch(20% 0.02 62) 28%, transparent);
+  }
+
+  :global([data-theme="mdxctl-dark"]) .search__panel {
+    border-color: var(--color-base-300);
+    background: var(--color-base-200);
+  }
+
+  .search__dialog[open] .search__panel {
+    animation: search-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes search-in {
+    from {
+      opacity: 0;
+      transform: translateY(-0.5rem) scale(0.985);
+    }
+  }
+
+  /* --- input -------------------------------------------------------------- */
+  .search__field {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid
+      color-mix(in oklch, var(--color-base-300) 70%, transparent);
+  }
+
+  .search__field-icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex-shrink: 0;
+    opacity: 0.45;
+  }
+
+  .search__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 0.95rem;
+    outline: none;
+  }
+
+  .search__input::placeholder {
+    color: currentColor;
+    opacity: 0.4;
+  }
+
+  /* The native clear affordance fights the esc hint. */
+  .search__input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  .search__close {
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .search__close:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 0.3rem;
+  }
+
+  /* --- results ------------------------------------------------------------ */
+  .search__results {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.4rem;
+  }
+
+  /* Result rows are inserted at runtime, so their selectors must be global;
+     Astro's scoped selectors only match server-rendered elements. */
+  :global(.search__group + .search__group) {
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+    border-top: 1px solid
+      color-mix(in oklch, var(--color-base-300) 55%, transparent);
+  }
+
+  :global(.search__hit) {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--radius-field);
+    color: inherit;
+    text-decoration: none;
+    text-align: left;
+  }
+
+  /* Sub-rows (heading/text) are indented under their page with a guide rail. */
+  :global(.search__hit--nested) {
+    width: calc(100% - 1.15rem);
+    margin-left: 1.15rem;
+    border-left: 1px solid
+      color-mix(in oklch, var(--color-base-300) 80%, transparent);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding-left: 0.85rem;
+  }
+
+  :global(.search__hit[data-active="true"]) {
+    background: color-mix(in oklch, var(--color-primary) 12%, transparent);
+  }
+
+  :global(.search__hit[data-active="true"] .search__hit-title) {
+    color: var(--color-primary);
+  }
+
+  :global(.search__hit-icon) {
+    display: block;
+    width: 0.95rem;
+    height: 0.95rem;
+    min-width: 0.95rem;
+    max-width: 0.95rem;
+    flex: 0 0 0.95rem;
+    margin-top: 0.15rem;
+    opacity: 0.5;
+  }
+
+  :global(.search__hit-body) {
+    min-width: 0;
+    flex: 1;
+  }
+
+  :global(.search__hit-title) {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.search__hit--page .search__hit-title) {
+    font-weight: 600;
+  }
+
+  :global(.search__hit-excerpt) {
+    margin-top: 0.15rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    opacity: 0.62;
+    /* Two lines of context, like fumadocs. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  :global(.search__hit-path) {
+    display: block;
+    margin-top: 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    opacity: 0.45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.search__hit mark) {
+    background: color-mix(in oklch, var(--color-accent) 45%, transparent);
+    color: inherit;
+    border-radius: 0.2rem;
+    padding: 0 0.1em;
+  }
+
+  :global([data-theme="mdxctl-dark"] .search__hit mark) {
+    background: oklch(34% 0.06 78);
+    color: var(--color-accent);
+  }
+
+  /* --- states ------------------------------------------------------------- */
+  :global(.search__state) {
+    padding: 2rem 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    opacity: 0.6;
+  }
+
+  :global(.search__state strong) {
+    font-weight: 600;
+  }
+
+  :global(.search__state-hint) {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    opacity: 0.75;
+  }
+
+  /* --- footer ------------------------------------------------------------- */
+  .search__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex-shrink: 0;
+    padding: 0.45rem 0.7rem;
+    border-top: 1px solid
+      color-mix(in oklch, var(--color-base-300) 70%, transparent);
+    font-size: 0.7rem;
+    opacity: 0.55;
+  }
+
+  .search__legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .search__legend--end {
+    margin-left: auto;
+    font-family: var(--font-mono);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .search__dialog[open] .search__panel {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { create, insertMultiple, search as oramaSearch, type AnyOrama } from "@orama/orama";
+
+  type RecordType = "page" | "heading" | "text";
+
+  interface SearchRecord {
+    id: string;
+    pageId: string;
+    pageTitle: string;
+    url: string;
+    type: RecordType;
+    heading: string;
+    content: string;
+  }
+
+  interface Hit {
+    record: SearchRecord;
+    score: number;
+  }
+
+  /** One page plus the heading/text matches found inside it. */
+  interface Group {
+    pageId: string;
+    pageTitle: string;
+    url: string;
+    score: number;
+    /** True when the page itself matched, not just its contents. */
+    matchedPage: boolean;
+    children: Hit[];
+  }
+
+  const DEBOUNCE_MS = 110;
+  /** Pages listed per query, and sub-results shown per page. */
+  const MAX_GROUPS = 8;
+  const MAX_CHILDREN = 4;
+
+  /** One Orama instance per project, reused for the whole session. */
+  const indexes = new Map<string, Promise<AnyOrama>>();
+
+  async function loadIndex(project: string): Promise<AnyOrama> {
+    const existing = indexes.get(project);
+    if (existing) return existing;
+
+    const pending = (async () => {
+      const response = await fetch(
+        `/search-index/${encodeURIComponent(project)}.json`,
+        { headers: { accept: "application/json" } },
+      );
+      if (!response.ok) {
+        throw new Error(`search index unavailable (${response.status})`);
+      }
+      const payload = (await response.json()) as { records: SearchRecord[] };
+
+      const db = create({
+        schema: {
+          pageTitle: "string",
+          heading: "string",
+          content: "string",
+        } as const,
+        components: {
+          tokenizer: { language: "english", stemming: false },
+        },
+      });
+      await insertMultiple(db, payload.records as never[]);
+      return db as AnyOrama;
+    })();
+
+    indexes.set(project, pending);
+    // A failed fetch shouldn't poison the cache — let the next query retry.
+    pending.catch(() => indexes.delete(project));
+    return pending;
+  }
+
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /** Wraps every query term in <mark>, on already-escaped text. */
+  function highlight(text: string, terms: string[]): string {
+    const escaped = escapeHtml(text);
+    if (terms.length === 0) return escaped;
+    const pattern = new RegExp(`(${terms.map(escapeRegExp).join("|")})`, "gi");
+    return escaped.replace(pattern, "<mark>$1</mark>");
+  }
+
+  /**
+   * Recentres a long prose block on the first matching term, so the excerpt
+   * shows the hit rather than the start of the paragraph.
+   */
+  function excerpt(text: string, terms: string[], budget = 180): string {
+    if (text.length <= budget) return text;
+
+    let at = -1;
+    for (const term of terms) {
+      const found = text.toLowerCase().indexOf(term.toLowerCase());
+      if (found !== -1 && (at === -1 || found < at)) at = found;
+    }
+    if (at <= budget * 0.4) return `${text.slice(0, budget).trimEnd()}…`;
+
+    const start = Math.max(0, at - Math.floor(budget * 0.35));
+    const from = text.indexOf(" ", start) + 1 || start;
+    return `…${text.slice(from, from + budget).trimEnd()}…`;
+  }
+
+  const ICONS: Record<RecordType, string> = {
+    page: '<path d="M6 3h7l5 5v13H6z"/><path d="M13 3v5h5"/>',
+    heading: '<path d="M6 4v16M18 4v16M6 12h12"/>',
+    text: '<path d="M5 6h14M5 12h14M5 18h9"/>',
+  };
+
+  function icon(type: RecordType): string {
+    return `<svg class="search__hit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[type]}</svg>`;
+  }
+
+  /** Groups flat hits by page, preserving Orama's ranking order. */
+  function group(hits: Hit[]): Group[] {
+    const groups = new Map<string, Group>();
+
+    for (const hit of hits) {
+      const { record } = hit;
+      let entry = groups.get(record.pageId);
+      if (!entry) {
+        entry = {
+          pageId: record.pageId,
+          pageTitle: record.pageTitle,
+          // The group header always points at the page itself; anchors belong
+          // to the nested heading/text rows.
+          url: `/${record.pageId}`,
+          score: hit.score,
+          matchedPage: false,
+          children: [],
+        };
+        groups.set(record.pageId, entry);
+      }
+
+      entry.score = Math.max(entry.score, hit.score);
+      if (record.type === "page") {
+        entry.matchedPage = true;
+      } else if (entry.children.length < MAX_CHILDREN) {
+        entry.children.push(hit);
+      }
+    }
+
+    return [...groups.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MAX_GROUPS);
+  }
+
+  class SearchDialog {
+    private readonly root: HTMLElement;
+    private readonly dialog: HTMLDialogElement;
+    private readonly input: HTMLInputElement;
+    private readonly results: HTMLElement;
+    private readonly count: HTMLElement | null;
+    private readonly project: string;
+    private readonly label: string;
+
+    private items: HTMLAnchorElement[] = [];
+    private active = -1;
+    private timer: number | undefined;
+    /** Guards against a slow query overwriting a newer one. */
+    private queryId = 0;
+
+    constructor(root: HTMLElement) {
+      this.root = root;
+      this.project = root.dataset.project ?? "";
+      this.label = root.dataset.label ?? this.project;
+      this.dialog = root.querySelector<HTMLDialogElement>("[data-search-dialog]")!;
+      this.input = root.querySelector<HTMLInputElement>("[data-search-input]")!;
+      this.results = root.querySelector<HTMLElement>("[data-search-results]")!;
+      this.count = root.querySelector<HTMLElement>("[data-search-count]");
+
+      root
+        .querySelector("[data-search-open]")
+        ?.addEventListener("click", () => this.open());
+      root
+        .querySelector("[data-search-close]")
+        ?.addEventListener("click", () => this.close());
+
+      // Mac reports "⌘K"; everything else "Ctrl K".
+      const hint = root.querySelector<HTMLElement>("[data-search-hint]");
+      if (hint && !/mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent)) {
+        hint.textContent = "Ctrl K";
+      }
+
+      this.input.addEventListener("input", () => this.schedule());
+      this.dialog.addEventListener("keydown", (event) => this.onKeydown(event));
+      // Clicking the backdrop (outside the panel) dismisses.
+      this.dialog.addEventListener("click", (event) => {
+        if (event.target === this.dialog) this.close();
+      });
+      this.dialog.addEventListener("close", () => this.reset());
+
+      // Warm the index on intent, so the first keystroke already has data.
+      const warm = () => void loadIndex(this.project).catch(() => {});
+      root.querySelector("[data-search-open]")?.addEventListener("pointerenter", warm, {
+        once: true,
+      });
+    }
+
+    open(): void {
+      if (this.dialog.open) return;
+      this.dialog.showModal();
+      this.input.focus();
+      void loadIndex(this.project).catch(() => {});
+      if (this.input.value.trim()) this.run(this.input.value);
+      else this.renderIdle();
+    }
+
+    close(): void {
+      if (this.dialog.open) this.dialog.close();
+    }
+
+    private reset(): void {
+      window.clearTimeout(this.timer);
+      this.input.value = "";
+      this.items = [];
+      this.active = -1;
+      this.results.replaceChildren();
+      if (this.count) this.count.textContent = "";
+    }
+
+    private schedule(): void {
+      window.clearTimeout(this.timer);
+      const value = this.input.value;
+      this.timer = window.setTimeout(() => this.run(value), DEBOUNCE_MS);
+    }
+
+    private renderIdle(): void {
+      this.items = [];
+      this.active = -1;
+      if (this.count) this.count.textContent = "";
+      this.results.innerHTML = `
+        <p class="search__state">
+          Search <strong>${escapeHtml(this.label)}</strong>
+          <span class="search__state-hint">Type to find pages, headings and content</span>
+        </p>`;
+    }
+
+    private renderMessage(message: string, hint?: string): void {
+      this.items = [];
+      this.active = -1;
+      this.results.innerHTML = `
+        <p class="search__state">${escapeHtml(message)}${
+          hint ? `<span class="search__state-hint">${escapeHtml(hint)}</span>` : ""
+        }</p>`;
+    }
+
+    private async run(raw: string): Promise<void> {
+      const term = raw.trim();
+      const id = ++this.queryId;
+
+      if (term.length === 0) {
+        this.renderIdle();
+        return;
+      }
+
+      let db: AnyOrama;
+      try {
+        db = await loadIndex(this.project);
+      } catch {
+        if (id === this.queryId) {
+          this.renderMessage(
+            "Search index unavailable",
+            "Restart the dev server and try again",
+          );
+        }
+        return;
+      }
+      if (id !== this.queryId) return;
+
+      const response = await oramaSearch(db, {
+        term,
+        // Titles and headings outrank body prose for the same match.
+        properties: ["pageTitle", "heading", "content"],
+        boost: { pageTitle: 3, heading: 2, content: 1 },
+        tolerance: term.length > 3 ? 1 : 0,
+        threshold: 0,
+        limit: 60,
+      });
+      if (id !== this.queryId) return;
+
+      const hits: Hit[] = response.hits.map((hit) => ({
+        record: hit.document as unknown as SearchRecord,
+        score: hit.score,
+      }));
+
+      this.render(group(hits), term);
+    }
+
+    private render(groups: Group[], term: string): void {
+      const terms = term.split(/\s+/).filter((part) => part.length > 1);
+
+      if (groups.length === 0) {
+        this.renderMessage(`No results for "${term}"`, "Try a different keyword");
+        return;
+      }
+
+      const html = groups
+        .map((entry) => {
+          const rows = [
+            `<a class="search__hit search__hit--page" href="${escapeHtml(entry.url)}" role="option" data-search-hit>
+              ${icon("page")}
+              <span class="search__hit-body">
+                <span class="search__hit-title">${highlight(entry.pageTitle, terms)}</span>
+                <span class="search__hit-path">${escapeHtml(entry.pageId)}</span>
+              </span>
+            </a>`,
+          ];
+
+          for (const child of entry.children) {
+            const { record } = child;
+            const title =
+              record.type === "heading"
+                ? record.heading
+                : record.heading || entry.pageTitle;
+            const body =
+              record.type === "text"
+                ? `<span class="search__hit-excerpt">${highlight(
+                    excerpt(record.content, terms),
+                    terms,
+                  )}</span>`
+                : "";
+
+            rows.push(
+              `<a class="search__hit search__hit--nested" href="${escapeHtml(record.url)}" role="option" data-search-hit>
+                ${icon(record.type)}
+                <span class="search__hit-body">
+                  <span class="search__hit-title">${highlight(title, terms)}</span>
+                  ${body}
+                </span>
+              </a>`,
+            );
+          }
+
+          return `<div class="search__group">${rows.join("")}</div>`;
+        })
+        .join("");
+
+      this.results.innerHTML = html;
+      this.items = [...this.results.querySelectorAll<HTMLAnchorElement>("[data-search-hit]")];
+      this.setActive(0);
+
+      if (this.count) {
+        const pages = groups.length;
+        this.count.textContent = `${pages} ${pages === 1 ? "page" : "pages"}`;
+      }
+    }
+
+    private setActive(index: number): void {
+      if (this.items.length === 0) {
+        this.active = -1;
+        return;
+      }
+      const next = (index + this.items.length) % this.items.length;
+      this.items[this.active]?.removeAttribute("data-active");
+      this.active = next;
+      const item = this.items[next];
+      item.setAttribute("data-active", "true");
+      item.scrollIntoView({ block: "nearest" });
+      this.input.setAttribute("aria-activedescendant", item.id || "");
+    }
+
+    private onKeydown(event: KeyboardEvent): void {
+      switch (event.key) {
+        case "ArrowDown":
+          event.preventDefault();
+          this.setActive(this.active + 1);
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          this.setActive(this.active - 1);
+          break;
+        case "Home":
+          if (this.items.length) {
+            event.preventDefault();
+            this.setActive(0);
+          }
+          break;
+        case "End":
+          if (this.items.length) {
+            event.preventDefault();
+            this.setActive(this.items.length - 1);
+          }
+          break;
+        case "Enter": {
+          const item = this.items[this.active];
+          if (item) {
+            event.preventDefault();
+            this.close();
+            // Same-page anchors don't fire navigation, so assign directly.
+            window.location.assign(item.href);
+          }
+          break;
+        }
+        // "Escape" is handled natively by <dialog>.
+      }
+    }
+  }
+
+  /**
+   * Binds every search root on the page. Astro's ClientRouter swaps the DOM
+   * without reloading, so this runs again after each navigation — the instance
+   * is tracked on the element to avoid double binding.
+   */
+  const BOUND = new WeakSet<HTMLElement>();
+  let palette: SearchDialog | undefined;
+
+  function bind(): void {
+    palette = undefined;
+    for (const root of document.querySelectorAll<HTMLElement>("[data-search]")) {
+      if (!BOUND.has(root)) {
+        BOUND.add(root);
+        (root as HTMLElement & { _search?: SearchDialog })._search = new SearchDialog(root);
+      }
+      palette = (root as HTMLElement & { _search?: SearchDialog })._search;
+    }
+  }
+
+  // ⌘K / Ctrl+K from anywhere on a docs page, plus "/" when not already typing.
+  document.addEventListener("keydown", (event) => {
+    if (!palette) return;
+    const isShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
+    const target = event.target as HTMLElement | null;
+    const typing =
+      !!target &&
+      (target.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+
+    if (isShortcut || (event.key === "/" && !typing)) {
+      event.preventDefault();
+      palette.open();
+    }
+  });
+
+  bind();
+  document.addEventListener("astro:page-load", bind);
+</script>

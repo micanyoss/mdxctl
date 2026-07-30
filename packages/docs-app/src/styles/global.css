@@ -47,6 +47,52 @@
   --noise: 0;
 }
 
+/*
+ * "mdxctl-dark" — the same warm world after dark. Surfaces keep the beige hue
+ * (hue ~62, low chroma) rather than going neutral grey, and primary/accent are
+ * lifted in lightness so they stay legible on the dark paper.
+ */
+@plugin "daisyui/theme" {
+  name: "mdxctl-dark";
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+
+  /* Near-black paper, still on the beige hue (~62) so it reads warm not grey. */
+  --color-base-100: oklch(15% 0.008 62);
+  --color-base-200: oklch(18.5% 0.01 62);
+  --color-base-300: oklch(24.5% 0.012 62);
+  --color-base-content: oklch(96% 0.013 84);
+
+  /* Brand hues lifted well above the surface: all clear AA on base-100. */
+  --color-primary: oklch(72% 0.115 45);
+  --color-primary-content: oklch(16% 0.03 45);
+  --color-secondary: oklch(78% 0.058 190);
+  --color-secondary-content: oklch(17% 0.035 195);
+  --color-accent: oklch(84% 0.1 78);
+  --color-accent-content: oklch(18% 0.045 55);
+  --color-neutral: oklch(22% 0.012 62);
+  --color-neutral-content: oklch(95% 0.013 84);
+
+  --color-info: oklch(76% 0.085 232);
+  --color-info-content: oklch(16% 0.045 240);
+  --color-success: oklch(76% 0.105 152);
+  --color-success-content: oklch(16% 0.045 155);
+  --color-warning: oklch(83% 0.125 78);
+  --color-warning-content: oklch(18% 0.06 55);
+  --color-error: oklch(72% 0.155 25);
+  --color-error-content: oklch(16% 0.05 25);
+
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
 @theme {
   --font-sans:
     ui-sans-serif, "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
@@ -72,9 +118,124 @@
   background-attachment: fixed;
 }
 
+/* The washes read as glare on dark paper, so dial them right back. */
+[data-theme="mdxctl-dark"] .bg-paper {
+  background-image:
+    radial-gradient(
+      70rem 40rem at 12% -10%,
+      color-mix(in oklch, var(--color-accent) 7%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      55rem 35rem at 105% 0%,
+      color-mix(in oklch, var(--color-secondary) 6%, transparent),
+      transparent 55%
+    );
+}
+
+/*
+ * Theme crossfade. Only armed while the toggle is switching (see
+ * ThemeToggle.astro) so ordinary navigation and hover states stay snappy.
+ */
+.theme-animating,
+.theme-animating :where(header, main, aside, nav, section, article, div, a, p,
+  span, code, pre, h1, h2, h3, li, th, td, hr, button) {
+  transition:
+    background-color 320ms ease,
+    background-image 320ms ease,
+    border-color 320ms ease,
+    color 320ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-animating,
+  .theme-animating :where(header, main, aside, nav, section, article, div, a, p,
+    span, code, pre, h1, h2, h3, li, th, td, hr, button) {
+    transition: none;
+  }
+}
+
 /* Hairline used between list rows and panels. */
 .rule {
   border-color: color-mix(in oklch, var(--color-base-300) 75%, transparent);
+}
+
+/* On near-black paper a 75% hairline disappears, so let it run at full strength. */
+[data-theme="mdxctl-dark"] .rule {
+  border-color: var(--color-base-300);
+}
+
+/*
+ * Cards sit *above* the paper in dark mode. bg-base-100 would make them vanish
+ * into the body, so lift them to base-200 and keep the hover ring visible.
+ */
+[data-theme="mdxctl-dark"] .card-surface {
+  background-color: var(--color-base-200);
+}
+
+/* Code blocks: neutral is nearly the body colour, so outline them instead. */
+[data-theme="mdxctl-dark"] .mdx-content :where(pre) {
+  border: 1px solid var(--color-base-300);
+}
+
+[data-theme="mdxctl-dark"] .mdx-content :where(code) {
+  background: color-mix(in oklch, var(--color-base-300) 70%, transparent);
+}
+
+/*
+ * Project card badges. Light mode keeps the solid wash it always had; dark mode
+ * flips to a tinted surface with the *bright* hue as the text, because dark
+ * `*-content` ink on a dark tint lands around 2:1 and is unreadable.
+ */
+.badge-docs {
+  background: color-mix(in oklch, var(--color-accent) 35%, transparent);
+  color: var(--color-accent-content);
+}
+
+.badge-restart {
+  background: color-mix(in oklch, var(--color-warning) 30%, transparent);
+  color: var(--color-warning-content);
+}
+
+[data-theme="mdxctl-dark"] .badge-docs {
+  /* Solid tints, not color-mix: the compiled fallback for an unsupported
+     color-mix is the *solid* hue, which would leave accent-on-accent. */
+  background: oklch(28% 0.04 78);
+  color: var(--color-accent);
+}
+
+[data-theme="mdxctl-dark"] .badge-restart {
+  background: oklch(28% 0.045 70);
+  color: var(--color-warning);
+}
+
+/*
+ * Faint labels (path hints, section captions, separators) were tuned against
+ * light paper. At 40-50% over near-black they turn muddy, so nudge the floor up
+ * in dark mode only — every step below now clears 4.5:1 on base-100.
+ */
+[data-theme="mdxctl-dark"] .opacity-25 {
+  opacity: 0.4;
+}
+
+[data-theme="mdxctl-dark"] .opacity-40,
+[data-theme="mdxctl-dark"] .opacity-45 {
+  opacity: 0.62;
+}
+
+[data-theme="mdxctl-dark"] .opacity-50,
+[data-theme="mdxctl-dark"] .opacity-55 {
+  opacity: 0.68;
+}
+
+[data-theme="mdxctl-dark"] .opacity-60,
+[data-theme="mdxctl-dark"] .opacity-65 {
+  opacity: 0.75;
+}
+
+[data-theme="mdxctl-dark"] .opacity-70,
+[data-theme="mdxctl-dark"] .opacity-75 {
+  opacity: 0.82;
 }
 
 ::view-transition-group(navbar-brand) {

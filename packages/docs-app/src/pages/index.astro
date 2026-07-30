@@ -68,7 +68,7 @@ const projects = await getProjects();
               <li>
                 <a
                   href={`/${project.slug}`}
-                  class="group flex h-full flex-col gap-3 rounded-box border rule bg-base-100 p-5 shadow-sm transition duration-150 hover:border-primary hover:shadow-md"
+                  class="group card-surface flex h-full flex-col gap-3 rounded-box border rule bg-base-100 p-5 shadow-sm transition duration-150 hover:border-primary hover:shadow-md"
                 >
                   <div class="flex items-start justify-between gap-3">
                     <span class="font-mono text-lg leading-tight font-semibold tracking-tight">
@@ -78,10 +78,10 @@ const projects = await getProjects();
                       class:list={[
                         "shrink-0 rounded-selector px-2 py-0.5 text-[0.7rem] font-medium",
                         project.pages.length > 0
-                          ? "bg-accent/35 text-accent-content"
+                          ? "badge-docs"
                           : project.linked
-                            ? "bg-base-200 opacity-60"
-                            : "bg-warning/30 text-warning-content",
+                            ? "bg-base-200 opacity-70"
+                            : "badge-restart",
                       ]}
                     >
                       {project.pages.length > 0

@@ -1,5 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
+import ThemeToggle from "../components/ThemeToggle.astro";
 import "../styles/global.css";
 
 interface Props {
@@ -26,6 +27,22 @@ const { title = "mdxctl", description, wide = false } = Astro.props;
     {description && <meta name="description" content={description} />}
     <title>{title}</title>
     <ClientRouter />
+    {/* Applied before first paint so a saved dark theme never flashes light. */}
+    <script is:inline>
+      (() => {
+        let theme = "mdxctl";
+        try {
+          if (localStorage.getItem("mdxctl-theme") === "mdxctl-dark") {
+            theme = "mdxctl-dark";
+          }
+        } catch {
+          /* storage unavailable — fall back to the light default */
+        }
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme =
+          theme === "mdxctl-dark" ? "dark" : "light";
+      })();
+    </script>
   </head>
   <body class="bg-paper min-h-screen bg-base-100 text-base-content antialiased">
     <header
@@ -58,6 +75,11 @@ const { title = "mdxctl", description, wide = false } = Astro.props;
         </a>
         <div class="flex min-w-0 flex-1 items-center gap-3">
           <slot name="header" />
+        </div>
+        {/* Docs pages drop the search trigger in here; the index has none. */}
+        <div class="ml-auto flex shrink-0 items-center gap-2">
+          <slot name="actions" />
+          <ThemeToggle class="-mr-1.5" />
         </div>
       </div>
     </header>
