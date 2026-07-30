@@ -1,4 +1,5 @@
 import {
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -10,6 +11,8 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { REGISTRY_DIR } from "../registry.js";
+import { VERSION } from "./version.js";
 
 export interface LinkedProject {
   /** Registered project name — becomes the first URL segment. */
@@ -137,9 +140,10 @@ function resolveInstalledBin(
   return join(pkgDir, binRel);
 }
 
-/** Resolves the astro CLI entry point inside a docs-app installation. */
-export function resolveAstroBin(docsAppDir: string): string {
-  return resolveInstalledBin(docsAppDir, "astro", "astro");
+/** Resolves the astro CLI entry point bundled with the mdxctl package. */
+export function resolveAstroBin(): string {
+  const pkgRoot = findCliPackageRoot(dirname(fileURLToPath(import.meta.url)));
+  return resolveInstalledBin(pkgRoot, "astro", "astro");
 }
 
 /** Resolves the portless CLI entry point bundled with the mdxctl package. */
@@ -172,12 +176,11 @@ function findCliPackageRoot(startDir: string): string {
 }
 
 /**
- * Resolves the docs-app directory.
+ * Resolves the writable docs-app directory.
  *
- * Priority:
- * 1. MDXCTL_DOCS_APP_PATH env var (explicit override, useful for development)
- * 2. <cli-pkg>/docs-app     (docs-app bundled inside the published package)
- * 3. <cli-pkg>/../docs-app  (pnpm monorepo layout: packages/docs-app)
+ * Development uses the workspace app directly. Published installs ship a
+ * read-only template at <cli-pkg>/docs-app, which is copied into the user's
+ * mdxctl data directory so Astro can write caches and project links there.
  */
 export function resolveDocsAppDir(): string {
   const override = process.env.MDXCTL_DOCS_APP_PATH;
@@ -192,15 +195,41 @@ export function resolveDocsAppDir(): string {
   }
 
   const pkgRoot = findCliPackageRoot(dirname(fileURLToPath(import.meta.url)));
-  const candidates = [join(pkgRoot, "docs-app"), join(pkgRoot, "..", "docs-app")];
-  for (const candidate of candidates) {
-    if (existsSync(join(candidate, "astro.config.mjs"))) {
-      return candidate;
-    }
+  const workspaceApp = join(pkgRoot, "..", "docs-app");
+  if (existsSync(join(workspaceApp, "package.json"))) {
+    return workspaceApp;
   }
-  throw new Error(
-    "Could not locate the docs-app. Looked in:\n" +
-      candidates.map((c) => `  - ${c}`).join("\n") +
-      "\nSet MDXCTL_DOCS_APP_PATH to point at it.",
-  );
+
+  const templateDir = join(pkgRoot, "docs-app");
+  if (!existsSync(join(templateDir, "astro.config.mjs"))) {
+    throw new Error(`The mdxctl package is missing its bundled docs app at ${templateDir}`);
+  }
+
+  const runtimeDir = join(REGISTRY_DIR, "runtime", `docs-app-${VERSION}`);
+  const markerPath = join(runtimeDir, ".mdxctl-template-version");
+  let current = false;
+  try {
+    current = readFileSync(markerPath, "utf8").trim() === VERSION;
+  } catch {
+    // The runtime copy has not been created yet.
+  }
+
+  if (!current) {
+    rmSync(runtimeDir, { recursive: true, force: true });
+    mkdirSync(dirname(runtimeDir), { recursive: true });
+    cpSync(templateDir, runtimeDir, { recursive: true });
+    writeFileSync(markerPath, `${VERSION}\n`, "utf8");
+  }
+
+  const runtimeModules = join(runtimeDir, "node_modules");
+  if (!existsSync(runtimeModules)) {
+    const installedModules = join(pkgRoot, "node_modules");
+    symlinkSync(
+      installedModules,
+      runtimeModules,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+  }
+
+  return runtimeDir;
 }

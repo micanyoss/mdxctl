@@ -27,6 +27,4 @@ jobs:
       - run: pnpm --filter mdxctl build
 
       - name: Publish mdxctl to npm
-        run: pnpm --filter mdxctl publish --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm --filter mdxctl publish --no-git-checks

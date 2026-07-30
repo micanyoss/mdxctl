@@ -190,7 +190,7 @@ export default defineCommand({
     let astroBin: string;
     try {
       docsAppDir = resolveDocsAppDir();
-      astroBin = resolveAstroBin(docsAppDir);
+      astroBin = resolveAstroBin();
     } catch (err) {
       console.error(pc.red((err as Error).message));
       process.exit(1);

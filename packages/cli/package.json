@@ -2,20 +2,31 @@
   "name": "mdxctl",
   "version": "0.1.0",
   "description": "Manage and serve MDX docs projects from one place",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/micanyoss/mdxctl.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/micanyoss/mdxctl#readme",
+  "bugs": {
+    "url": "https://github.com/micanyoss/mdxctl/issues"
+  },
   "type": "module",
   "bin": {
     "mdxctl": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs-app"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --clean",
+    "build": "tsup src/cli.ts --format esm --clean && node scripts/bundle-docs-app.mjs",
     "dev": "tsx src/cli.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build"
   },
   "keywords": [
     "mdx",
@@ -24,13 +35,22 @@
     "astro"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "dependencies": {
+    "@astrojs/mdx": "^7.0.3",
     "@clack/prompts": "^1.7.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.1.3",
     "citty": "^0.2.2",
+    "daisyui": "^5.7.4",
     "gradient-string": "^3.0.0",
     "log-update": "^8.0.0",
     "picocolors": "^1.1.1",
-    "portless": "^0.15.4"
+    "portless": "^0.15.4",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

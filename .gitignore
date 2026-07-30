@@ -3,9 +3,11 @@ node_modules/
 
 # Build output and framework caches
 dist/
+packages/cli/docs-app/
 .astro/
 .turbo/
 .vite/
+.tmp-mdxctl-test/
 *.tsbuildinfo
 
 # Tests
