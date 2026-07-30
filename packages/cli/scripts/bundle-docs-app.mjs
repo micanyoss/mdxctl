@@ -18,4 +18,6 @@ for (const entry of ["astro.config.mjs", "public", "src"]) {
   cpSync(join(sourceDir, entry), join(targetDir, entry), { recursive: true });
 }
 
+cpSync(resolve(cliDir, "../../README.md"), join(cliDir, "README.md"));
+
 console.log(`Bundled docs app in ${targetDir}`);

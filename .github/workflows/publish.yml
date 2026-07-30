@@ -22,10 +22,11 @@ permissions:
   id-token: write
 
 jobs:
-  publish:
+  build:
     if: github.ref == 'refs/heads/main'
     runs-on: blacksmith-2vcpu-ubuntu-2404
-    environment: npm
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Check out main
@@ -43,6 +44,9 @@ jobs:
           node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
+
+      - name: Remove deprecated npm config
+        run: npm config delete always-auth || true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -75,14 +79,68 @@ jobs:
           cd packages/cli
           npm pack --dry-run
 
-      - name: Publish to npm
+      - name: Pack npm artifact
         working-directory: packages/cli
-        run: npm publish --access public
+        run: npm pack --pack-destination ../../release-artifact
+
+      - name: Upload npm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdxctl-package
+          path: release-artifact/mdxctl-*.tgz
+          if-no-files-found: error
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdxctl-release-metadata
+          path: |
+            packages/cli/package.json
+            pnpm-lock.yaml
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: npm
+
+    steps:
+      - name: Download npm artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mdxctl-package
+          path: release-artifact
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Remove deprecated npm config
+        run: npm config delete always-auth || true
+
+      - name: Publish to npm with provenance
+        run: npm publish release-artifact/mdxctl-*.tgz --access public
+
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Download release metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: mdxctl-release-metadata
+          path: release-metadata
 
       - name: Commit and tag release
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
+          cp release-metadata/packages/cli/package.json packages/cli/package.json
+          cp release-metadata/pnpm-lock.yaml pnpm-lock.yaml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add packages/cli/package.json pnpm-lock.yaml
@@ -93,5 +151,5 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: gh release create "v${VERSION}" --generate-notes --title "mdxctl v${VERSION}"

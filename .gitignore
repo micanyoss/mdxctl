@@ -4,6 +4,7 @@ node_modules/
 # Build output and framework caches
 dist/
 packages/cli/docs-app/
+packages/cli/README.md
 .astro/
 .turbo/
 .vite/

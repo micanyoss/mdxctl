@@ -7,13 +7,13 @@
     "url": "git+https://github.com/micanyoss/mdxctl.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/micanyoss/mdxctl#readme",
+  "homepage": "https://mdxctl.micany.com",
   "bugs": {
     "url": "https://github.com/micanyoss/mdxctl/issues"
   },
   "type": "module",
   "bin": {
-    "mdxctl": "./dist/cli.js"
+    "mdxctl": "dist/cli.js"
   },
   "files": [
     "dist",
