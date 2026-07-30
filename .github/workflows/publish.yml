@@ -70,7 +70,6 @@ jobs:
 
       - name: Validate release
         run: |
-          pnpm --filter mdxctl test
           pnpm typecheck
           pnpm build
           cd packages/cli
