@@ -123,7 +123,11 @@ jobs:
         run: npm config delete always-auth || true
 
       - name: Publish to npm with provenance
-        run: npm publish release-artifact/mdxctl-*.tgz --access public
+        shell: bash
+        run: |
+          package_file=$(find release-artifact -maxdepth 1 -type f -name 'mdxctl-*.tgz' -print -quit)
+          test -n "$package_file"
+          npm publish "$package_file" --access public
 
       - name: Check out main
         uses: actions/checkout@v4
