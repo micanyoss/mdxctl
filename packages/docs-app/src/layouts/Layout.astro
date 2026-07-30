@@ -1,16 +1,15 @@
 ---
 import { ClientRouter } from "astro:transitions";
-import ThemeToggle from "../components/ThemeToggle.astro";
 import "../styles/global.css";
 
 interface Props {
   title?: string;
   description?: string;
-  /** Rendered in the header, right of the wordmark (breadcrumbs etc.). */
-  wide?: boolean;
+  /** True on project pages, which render a fixed sidebar rail. */
+  sidebar?: boolean;
 }
 
-const { title = "mdxctl", description, wide = false } = Astro.props;
+const { title = "mdxctl", description, sidebar = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -43,47 +42,31 @@ const { title = "mdxctl", description, wide = false } = Astro.props;
           theme === "mdxctl-dark" ? "dark" : "light";
       })();
     </script>
-  </head>
-  <body class="bg-paper min-h-screen bg-base-100 text-base-content antialiased">
-    <header
-      class="sticky top-0 z-30 border-b rule bg-base-100/85 backdrop-blur-md"
-    >
-      <div
-        class:list={[
-          "mx-auto flex h-14 w-full items-center gap-3 px-5",
-          wide ? "max-w-[100rem]" : "max-w-5xl",
-        ]}
-      >
-        <a
-          href="/"
-          class="group flex shrink-0 items-center gap-2.5"
-          aria-label="All projects"
-          transition:name="navbar-brand"
-        >
-          <svg
-            viewBox="0 0 64 56"
-            fill="currentColor"
-            class="h-6 w-auto text-base-content transition-transform group-hover:-rotate-6"
-            aria-hidden="true"
-          >
-            <path d="M14.5156 2.00933C15.24 0.765957 16.5788 2.4579e-6 18.0277 2.48372e-6L45.9723 0C47.4211 0 48.76.765946 49.4844 2.00932L63.4567 25.9907C64.1811 27.234 64.1811 28.7659 63.4567 30.0093L52.7013 48.4693L49.1892 42.4413L57.6032 28L44.8016 6.02797L19.1984 6.02797L10.8279 20.3947H3.80373L14.5156 2.00933Z" />
-            <path d="M44.8618 49.8686L48.0897 55.4088C47.4628 55.789 46.7327 56 45.9723 56H18.0277C16.5789 56 15.24 55.2341 14.5156 53.9907L.543322 30.0093C.168863 29.3666-.0120378 28.6468.000620907 27.9296L30.3455 27.9294C31.4345 27.9294 32.4404 28.5063 32.9828 29.442L44.8432 49.9007L44.8618 49.8686Z" />
-          </svg>
-          <span class="font-mono text-[0.95rem] font-semibold tracking-tight"
-            >mdxctl</span
-          >
-        </a>
-        <div class="flex min-w-0 flex-1 items-center gap-3">
-          <slot name="header" />
-        </div>
-        {/* Docs pages drop the search trigger in here; the index has none. */}
-        <div class="ml-auto flex shrink-0 items-center gap-2">
-          <slot name="actions" />
-          <ThemeToggle class="-mr-1.5" />
-        </div>
-      </div>
-    </header>
+    {/*
+      The rail ships "settled" (no animation) so a direct load or refresh never
+      slides. Coming from a page *without* a rail — i.e. the index — the flag is
+      stripped from the incoming rail so the slide-in plays exactly once.
 
+      This must run before paint, so it is inline and in <head>: the incoming
+      page's module scripts only run after the swap.
+    */}
+    <script is:inline>
+      if (!window.__mdxctlSidebarHook) {
+        window.__mdxctlSidebarHook = true;
+        document.addEventListener("astro:before-swap", (event) => {
+          const from = document.querySelector("[data-sidebar]");
+          const to = event.newDocument.querySelector("[data-sidebar]");
+          if (to && !from) to.removeAttribute("data-sidebar-settled");
+        });
+      }
+    </script>
+  </head>
+  <body
+    class:list={[
+      "bg-paper min-h-screen bg-base-100 text-base-content antialiased",
+      sidebar && "has-sidebar",
+    ]}
+  >
     <slot />
   </body>
 </html>

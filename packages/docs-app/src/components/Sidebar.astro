@@ -1,0 +1,387 @@
+---
+/**
+ * The single navigation surface for every project page — there is no navbar.
+ *
+ * Stack, top to bottom:
+ *   brand row   mdxctl / <project>            + theme toggle (right aligned)
+ *   search      full-width trigger for the ⌘K palette
+ *   view switch full-width Docs / Plan segmented control
+ *   nav         docs tree, or the plan file list
+ *
+ * Below `lg` it becomes an off-canvas drawer driven by [data-sidebar-open] on
+ * <html>; from `lg` up it is a fixed rail. Entering a project from the index
+ * slides the whole rail in from the left (see global.css → .sidebar--enter).
+ */
+import DocsNav from "./DocsNav.astro";
+import Search from "./Search.astro";
+import ThemeToggle from "./ThemeToggle.astro";
+import ViewSwitch from "./ViewSwitch.astro";
+import { buildNav, type Project } from "../lib/projects";
+
+interface Props {
+  project: Project;
+  view: "docs" | "plan";
+  /** Collection id of the doc being read, for the active nav row. */
+  currentId?: string;
+  /** True when the project's index.mdx is the current page. */
+  isHome?: boolean;
+}
+
+const { project, view, currentId, isHome = false } = Astro.props;
+const nav = buildNav(project.pages);
+---
+
+<aside
+  class="sidebar"
+  data-sidebar
+  data-sidebar-settled
+  aria-label={`${project.name} navigation`}
+>
+  <div class="sidebar__inner">
+    <div class="sidebar__brand">
+      <a href="/" class="sidebar__home" aria-label="All projects">
+        <svg
+          viewBox="0 0 64 56"
+          fill="currentColor"
+          class="sidebar__mark"
+          aria-hidden="true"
+        >
+          <path d="M14.5156 2.00933C15.24 0.765957 16.5788 2.4579e-6 18.0277 2.48372e-6L45.9723 0C47.4211 0 48.76.765946 49.4844 2.00932L63.4567 25.9907C64.1811 27.234 64.1811 28.7659 63.4567 30.0093L52.7013 48.4693L49.1892 42.4413L57.6032 28L44.8016 6.02797L19.1984 6.02797L10.8279 20.3947H3.80373L14.5156 2.00933Z" />
+          <path d="M44.8618 49.8686L48.0897 55.4088C47.4628 55.789 46.7327 56 45.9723 56H18.0277C16.5789 56 15.24 55.2341 14.5156 53.9907L.543322 30.0093C.168863 29.3666-.0120378 28.6468.000620907 27.9296L30.3455 27.9294C31.4345 27.9294 32.4404 28.5063 32.9828 29.442L44.8432 49.9007L44.8618 49.8686Z" />
+        </svg>
+        <span class="sidebar__wordmark">mdxctl</span>
+      </a>
+      <span class="sidebar__slash" aria-hidden="true">/</span>
+      <a href={`/${project.slug}`} class="sidebar__project" title={project.name}>
+        {project.name}
+      </a>
+      <ThemeToggle class="sidebar__theme" />
+    </div>
+
+    <Search
+      project={project.slug}
+      label={project.name}
+      variant="bar"
+      class="sidebar__search"
+    />
+
+    <ViewSwitch project={project.slug} active={view} class="sidebar__switch" />
+
+    <nav class="sidebar__nav" aria-label={`${project.name} ${view}`}>
+      {
+        view === "docs" ? (
+          <>
+            {project.home && (
+              <ul class="space-y-0.5">
+                <li>
+                  <a
+                    href={project.home.url}
+                    aria-current={isHome ? "page" : undefined}
+                    class:list={[
+                      "block truncate rounded-field px-2.5 py-1.5 text-sm transition",
+                      isHome
+                        ? "bg-primary/12 font-medium text-primary"
+                        : "opacity-70 hover:bg-base-200 hover:opacity-100",
+                    ]}
+                  >
+                    {project.home.title}
+                  </a>
+                </li>
+              </ul>
+            )}
+            <DocsNav nodes={nav} currentId={currentId} />
+            {project.pages.length === 0 && (
+              <p class="px-2.5 py-1.5 text-sm opacity-45">No docs yet</p>
+            )}
+          </>
+        ) : (
+          <>
+            <p class="px-2.5 pb-1 font-mono text-[0.68rem] tracking-widest uppercase opacity-40">
+              Plan files
+            </p>
+            {project.planFiles.length > 0 ? (
+              <ul class="space-y-0.5">
+                {project.planFiles.map((file) => (
+                  <li>
+                    <span
+                      class="block truncate rounded-field px-2.5 py-1.5 text-sm opacity-70"
+                      title={file.path}
+                    >
+                      {file.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="px-2.5 py-1.5 text-sm opacity-45">No plan files yet</p>
+            )}
+          </>
+        )
+      }
+    </nav>
+  </div>
+</aside>
+
+{/* Tap-to-dismiss layer for the mobile drawer. */}
+<button
+  type="button"
+  class="sidebar__scrim"
+  data-sidebar-close
+  tabindex="-1"
+  aria-hidden="true"></button>
+
+<button
+  type="button"
+  class="sidebar__toggle"
+  data-sidebar-toggle
+  aria-label="Open navigation"
+  aria-expanded="false"
+>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    aria-hidden="true"
+  >
+    <path d="M4 7h16M4 12h16M4 17h10"></path>
+  </svg>
+</button>
+
+<style>
+  .sidebar {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    /* The visual rail fills the shell's entire left gutter. Its controls stay
+       aligned to the same 16rem column via .sidebar__inner below. */
+    width: calc(var(--sidebar-inset) + var(--sidebar-w));
+    padding-left: var(--sidebar-inset);
+    border-right: 1px solid
+      color-mix(in oklch, var(--color-base-300) 72%, transparent);
+    background: color-mix(in oklch, var(--color-base-200) 34%, var(--color-base-100));
+  }
+
+  :global([data-theme="mdxctl-dark"]) .sidebar {
+    border-right-color: color-mix(in oklch, var(--color-base-300) 72%, transparent);
+    /* Dark mode needs less surface lift than light mode. */
+    background: color-mix(in oklch, var(--color-base-200) 16%, var(--color-base-100));
+  }
+
+  .sidebar__inner {
+    display: flex;
+    width: var(--sidebar-w);
+    height: 100%;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.9rem 1.1rem 1rem;
+  }
+
+  /* --- brand row ---------------------------------------------------------- */
+  .sidebar__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    padding-left: 0.15rem;
+  }
+
+  .sidebar__home {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+    color: var(--color-base-content);
+    text-decoration: none;
+  }
+
+  .sidebar__mark {
+    width: auto;
+    height: 1.05rem;
+    transition: transform 220ms ease;
+  }
+
+  .sidebar__home:hover .sidebar__mark {
+    transform: rotate(-6deg);
+  }
+
+  .sidebar__home:focus-visible,
+  .sidebar__project:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 0.35rem;
+  }
+
+  .sidebar__wordmark {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .sidebar__slash {
+    flex-shrink: 0;
+    opacity: 0.28;
+  }
+
+  .sidebar__project {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-base-content);
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+
+  .sidebar__project:hover {
+    color: var(--color-primary);
+  }
+
+  .sidebar__theme {
+    margin-left: auto;
+    margin-right: -0.25rem;
+  }
+
+  /* --- nav ---------------------------------------------------------------- */
+  /* Separates the two elevated controls from the nav list below them. */
+  .sidebar__nav {
+    flex: 1;
+    min-height: 0;
+    margin-top: 0.35rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid
+      color-mix(in oklch, var(--color-base-300) 60%, transparent);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.15rem;
+  }
+
+  .sidebar__nav::-webkit-scrollbar {
+    width: 0.4rem;
+  }
+
+  .sidebar__nav::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: color-mix(in oklch, var(--color-base-300) 80%, transparent);
+  }
+
+  /* --- mobile drawer ------------------------------------------------------ */
+  .sidebar__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: none;
+    border: 0;
+    background: color-mix(in oklch, oklch(12% 0.01 62) 45%, transparent);
+    backdrop-filter: blur(2px);
+    cursor: default;
+  }
+
+  .sidebar__toggle {
+    position: fixed;
+    z-index: 45;
+    top: 0.75rem;
+    left: 0.75rem;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    cursor: pointer;
+    border: 1px solid color-mix(in oklch, var(--color-base-300) 80%, transparent);
+    border-radius: var(--radius-field);
+    background: color-mix(in oklch, var(--color-base-100) 92%, transparent);
+    backdrop-filter: blur(8px);
+    color: var(--color-base-content);
+  }
+
+  .sidebar__toggle svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    opacity: 0.7;
+  }
+
+  .sidebar__toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 63.999rem) {
+    .sidebar {
+      width: var(--sidebar-w);
+      padding-left: 0;
+      background: var(--color-base-100);
+      transform: translateX(calc(-100% - 0.5rem));
+      transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    :global([data-theme="mdxctl-dark"]) .sidebar {
+      background: var(--color-base-100);
+    }
+
+    :global([data-sidebar-open]) .sidebar {
+      transform: none;
+      box-shadow: 0 0 40px -8px color-mix(in oklch, oklch(20% 0.02 62) 35%, transparent);
+    }
+
+    :global([data-sidebar-open]) .sidebar__scrim {
+      display: block;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .sidebar__toggle {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .sidebar__mark {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Mobile drawer state. Kept as an attribute on <html> so the scrim, the rail
+   * and page scroll-locking all key off one flag.
+   */
+  const root = document.documentElement;
+
+  function setOpen(open: boolean): void {
+    if (open) root.setAttribute("data-sidebar-open", "");
+    else root.removeAttribute("data-sidebar-open");
+    for (const button of document.querySelectorAll("[data-sidebar-toggle]")) {
+      button.setAttribute("aria-expanded", String(open));
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("[data-sidebar-toggle]")) {
+      setOpen(!root.hasAttribute("data-sidebar-open"));
+      return;
+    }
+    if (target?.closest("[data-sidebar-close]")) {
+      setOpen(false);
+      return;
+    }
+    // Following a link inside the drawer should reveal the page behind it.
+    if (target?.closest("[data-sidebar] a")) setOpen(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setOpen(false);
+  });
+
+  document.addEventListener("astro:after-swap", () => setOpen(false));
+</script>

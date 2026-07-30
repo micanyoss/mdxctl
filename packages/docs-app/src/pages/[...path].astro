@@ -1,9 +1,9 @@
 ---
 import { render } from "astro:content";
-import DocsNav from "../components/DocsNav.astro";
 import Layout from "../layouts/Layout.astro";
-import Search from "../components/Search.astro";
-import { buildNav, getProjects, shortenPath, type DocPage, type Project } from "../lib/projects";
+import Sidebar from "../components/Sidebar.astro";
+import DocHeader from "../components/DocHeader.astro";
+import { getProjects, shortenPath, type DocPage, type Project } from "../lib/projects";
 
 /**
  * Serves every registered project under its own first URL segment:
@@ -30,9 +30,23 @@ export async function getStaticPaths() {
 
 const { project, page } = Astro.props as { project: Project; page?: DocPage };
 
-const nav = buildNav(project.pages);
 const rendered = page ? await render(page.entry) : undefined;
 const Content = rendered?.Content;
+const markdown = page
+  ? [
+      "---",
+      `title: ${JSON.stringify(page.title)}`,
+      ...(page.description
+        ? [`description: ${JSON.stringify(page.description)}`]
+        : []),
+      ...(page.entry.data.order !== undefined
+        ? [`order: ${page.entry.data.order}`]
+        : []),
+      "---",
+      "",
+      page.entry.body,
+    ].join("\n")
+  : "";
 const docsFolder = project.path
   ? `${project.path}${project.path.includes("\\") ? "\\" : "/"}docs`
   : "the linked docs folder";
@@ -41,79 +55,34 @@ const title = page
   : `${project.name} · mdxctl`;
 ---
 
-<Layout title={title} description={page?.description} wide>
-  <Search slot="actions" project={project.slug} label={project.name} />
+<Layout title={title} description={page?.description} sidebar>
+  <Sidebar
+    project={project}
+    view="docs"
+    currentId={page?.id}
+    isHome={page?.isHome}
+  />
 
-  <Fragment slot="header">
-    <span class="opacity-25">/</span>
-    <a
-      href={`/${project.slug}`}
-      class="truncate font-mono text-sm font-medium hover:text-primary"
-      >{project.name}</a
-    >
+  <div class="content-column pt-14 pb-16 lg:pt-11">
     {
       page && !page.isHome && (
-        <>
-          <span class="hidden opacity-25 sm:inline">/</span>
-          <span class="hidden truncate text-sm opacity-55 sm:inline">
-            {page.segments.join(" / ")}
-          </span>
-        </>
+        <p class="mb-4 truncate font-mono text-[0.7rem] tracking-wide opacity-45">
+          {[project.name, ...page.segments].join(" / ")}
+        </p>
       )
     }
-  </Fragment>
 
-  <div
-    class="mx-auto flex w-full max-w-[100rem] gap-10 px-5 pt-8 pb-14 lg:gap-14"
-  >
-    <aside class="hidden w-60 shrink-0 lg:block">
-      <nav
-        class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-1"
-        aria-label={`${project.name} docs`}
-      >
-        <p class="mb-2 px-2.5 font-mono text-[0.68rem] tracking-widest uppercase opacity-40">
-          {project.name}
-        </p>
-        <ul class="space-y-0.5">
-          {
-            project.home && (
-              <li>
-                <a
-                  href={project.home.url}
-                  aria-current={page?.isHome ? "page" : undefined}
-                  class:list={[
-                    "block truncate rounded-field px-2.5 py-1.5 text-sm transition",
-                    page?.isHome
-                      ? "bg-primary/12 font-medium text-primary"
-                      : "opacity-70 hover:bg-base-200 hover:opacity-100",
-                  ]}
-                >
-                  {project.home.title}
-                </a>
-              </li>
-            )
-          }
-        </ul>
-        <DocsNav nodes={nav} currentId={page?.id} />
-        {
-          project.pages.length === 0 && (
-            <p class="px-2.5 text-sm opacity-45">No docs yet</p>
-          )
-        }
-      </nav>
-    </aside>
-
-    <main class="min-w-0 flex-1 pb-4 lg:max-w-3xl">
+    <main class="min-w-0">
       {
         Content ? (
-          <>
-            <p class="mb-1.5 font-mono text-xs tracking-widest uppercase opacity-40 lg:hidden">
-              {project.name}
-            </p>
-            <article class="mdx-content">
-              <Content />
-            </article>
-          </>
+          <article class="mdx-content">
+            <DocHeader
+              title={page.title}
+              description={page.description}
+              markdown={markdown}
+            />
+            <Content />
+          </article>
         ) : project.pages.length > 0 ? (
           <section>
             <p class="mb-2 font-mono text-xs tracking-widest uppercase opacity-45">
@@ -184,33 +153,6 @@ const title = page
               ← all projects
             </a>
           </section>
-        )
-      }
-
-      {
-        page?.isHome && project.pages.length > 1 && (
-          <nav class="mt-14 border-t rule pt-6 lg:hidden" aria-label="Docs in this project">
-            <p class="mb-3 font-mono text-[0.68rem] tracking-widest uppercase opacity-40">
-              In this project
-            </p>
-            <ul class="space-y-1">
-              {project.pages
-                .filter((entry) => !entry.isHome)
-                .map((entry) => (
-                  <li>
-                    <a
-                      href={entry.url}
-                      class="flex items-baseline justify-between gap-3 rounded-field px-2.5 py-2 transition hover:bg-base-200"
-                    >
-                      <span class="text-sm font-medium">{entry.title}</span>
-                      <span class="font-mono text-[0.7rem] opacity-40">
-                        {entry.segments.join("/")}
-                      </span>
-                    </a>
-                  </li>
-                ))}
-            </ul>
-          </nav>
         )
       }
     </main>

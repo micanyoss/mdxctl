@@ -1,0 +1,207 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  markdown: string;
+}
+
+const { title, description, markdown } = Astro.props;
+---
+
+<header class="doc-header mb-9 border-b rule pb-7" data-doc-actions data-markdown={markdown}>
+  <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
+  {
+    description && (
+      <p class="mt-2.5 max-w-2xl text-[1.05rem] leading-relaxed opacity-65">
+        {description}
+      </p>
+    )
+  }
+
+  <div class="mt-5 flex flex-wrap items-center gap-2">
+    <button
+      type="button"
+      class="btn doc-action-btn btn-sm"
+      data-copy-markdown
+      aria-live="polite"
+    >
+      <svg data-copy-icon class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <g data-copy-glyph>
+          <rect width="14" height="14" x="8" y="8" rx="2"></rect>
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+        </g>
+        <path data-check-glyph class="hidden" d="m5 12 4 4L19 6"></path>
+      </svg>
+      <span>Copy as markdown</span>
+    </button>
+
+    <div class="dropdown dropdown-bottom">
+      <button type="button" tabindex="0" class="btn doc-action-btn btn-sm" aria-haspopup="menu">
+        Open
+        <svg class="size-3.5 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6"></path>
+        </svg>
+      </button>
+      <ul tabindex="0" class="dropdown-content doc-ai-menu menu z-30 mt-1.5 w-44 rounded-field border rule bg-base-100 p-1 shadow-lg" role="menu">
+        <li>
+          <button type="button" data-ai-provider="chatgpt" role="menuitem">
+            <span class="ai-logo ai-logo--chatgpt size-5" aria-hidden="true"></span>
+            ChatGPT
+          </button>
+        </li>
+        <li>
+          <button type="button" data-ai-provider="claude" role="menuitem">
+            <img src="/ai/claude.svg" alt="" class="size-5 object-contain" />
+            Claude
+          </button>
+        </li>
+        <li>
+          <button type="button" data-ai-provider="gemini" role="menuitem">
+            <img src="/ai/gemini.svg" alt="" class="size-5 object-contain" />
+            Gemini
+          </button>
+        </li>
+        <li>
+          <button type="button" data-ai-provider="t3" role="menuitem">
+            <span class="ai-logo ai-logo--t3 size-5" aria-hidden="true"></span>
+            T3 Chat
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<style>
+  .doc-header :global(.btn) {
+    text-decoration: none;
+  }
+
+  .doc-action-btn {
+    border-color: color-mix(in oklch, var(--color-base-300) 85%, transparent);
+    background: var(--color-base-200);
+    color: var(--color-base-content);
+    box-shadow: none;
+  }
+
+  .doc-action-btn:hover {
+    border-color: var(--color-base-300);
+    background: var(--color-base-300);
+  }
+
+  .doc-ai-menu {
+    margin-bottom: 0 !important;
+    padding: 0.25rem !important;
+    list-style: none !important;
+    opacity: 0;
+    transform: translateY(-0.3rem) scale(0.98);
+    transform-origin: top left;
+    transition:
+      opacity 140ms ease,
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 140ms ease;
+  }
+
+  .dropdown:is(:focus-within, .dropdown-open) .doc-ai-menu {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .doc-ai-menu :global(li) {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .doc-ai-menu :global(li > button) {
+    min-height: 2.15rem;
+    gap: 0.6rem;
+    padding: 0.45rem 0.55rem !important;
+  }
+
+  :global([data-theme="mdxctl-dark"]) .doc-action-btn {
+    border-color: var(--color-base-300);
+    background: var(--color-base-200);
+  }
+
+  :global([data-theme="mdxctl-dark"]) .doc-action-btn:hover {
+    background: var(--color-base-300);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .doc-ai-menu {
+      transition: none;
+    }
+  }
+
+  .ai-logo {
+    display: inline-block;
+    flex: none;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+
+  .ai-logo--chatgpt {
+    background-image: url("/ai/openai-light.svg");
+  }
+
+  .ai-logo--t3 {
+    background-image: url("/ai/t3-light.svg");
+  }
+
+  :global([data-theme="mdxctl-dark"]) .ai-logo--chatgpt {
+    background-image: url("/ai/openai-dark.svg");
+  }
+
+  :global([data-theme="mdxctl-dark"]) .ai-logo--t3 {
+    background-image: url("/ai/t3-dark.svg");
+  }
+</style>
+
+<script>
+  const questionSuffix = "\n\nI want to ask questions about this";
+  const providerUrls: Record<string, (prompt: string) => string> = {
+    chatgpt: (prompt) => `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`,
+    claude: (prompt) => `https://claude.ai/new?q=${encodeURIComponent(prompt)}`,
+    gemini: (prompt) => `https://gemini.google.com/app?text=${encodeURIComponent(prompt)}`,
+    t3: (prompt) => `https://t3.chat/new?q=${encodeURIComponent(prompt)}`,
+  };
+
+  function markdownFor(container: HTMLElement): string {
+    return container.dataset.markdown ?? "";
+  }
+
+  document.addEventListener("click", async (event) => {
+    const target = event.target as HTMLElement | null;
+    const container = target?.closest<HTMLElement>("[data-doc-actions]");
+    if (!container) return;
+
+    const copyButton = target?.closest<HTMLButtonElement>("[data-copy-markdown]");
+    if (copyButton) {
+      const copyGlyph = copyButton.querySelector<SVGGElement>("[data-copy-glyph]");
+      const checkGlyph = copyButton.querySelector<SVGPathElement>("[data-check-glyph]");
+      try {
+        await navigator.clipboard.writeText(markdownFor(container));
+        copyGlyph?.classList.add("hidden");
+        checkGlyph?.classList.remove("hidden");
+        copyButton.setAttribute("aria-label", "Markdown copied");
+      } catch {
+        copyButton.setAttribute("aria-label", "Failed to copy markdown");
+      }
+      window.setTimeout(() => {
+        copyGlyph?.classList.remove("hidden");
+        checkGlyph?.classList.add("hidden");
+        copyButton.removeAttribute("aria-label");
+      }, 1800);
+      return;
+    }
+
+    const providerButton = target?.closest<HTMLButtonElement>("[data-ai-provider]");
+    if (!providerButton) return;
+    const makeUrl = providerUrls[providerButton.dataset.aiProvider ?? ""];
+    if (!makeUrl) return;
+
+    const prompt = `"${markdownFor(container)}"${questionSuffix}`;
+    window.open(makeUrl(prompt), "_blank", "noopener,noreferrer");
+  });
+</script>

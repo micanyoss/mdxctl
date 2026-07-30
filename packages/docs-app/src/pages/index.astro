@@ -1,5 +1,6 @@
 ---
 import CopyCommand from "../components/CopyCommand.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
 import Layout from "../layouts/Layout.astro";
 import { getProjects, shortenPath } from "../lib/projects";
 
@@ -10,12 +11,28 @@ const projects = await getProjects();
   title="mdxctl — projects"
   description="All docs projects registered with mdxctl on this machine"
 >
-  <Fragment slot="header">
-    <span class="opacity-25">/</span>
-    <span class="truncate font-mono text-sm font-medium">projects</span>
-  </Fragment>
+  {/* No chrome on the index: the toggle just floats over the paper. */}
+  <div class="fixed top-4 right-4 z-20">
+    <ThemeToggle />
+  </div>
 
   <main class="mx-auto w-full max-w-5xl px-5 pt-14 pb-20">
+    <div class="mb-10 flex items-center gap-2.5">
+      <svg
+        viewBox="0 0 64 56"
+        fill="currentColor"
+        class="h-5 w-auto"
+        aria-hidden="true"
+      >
+        <path d="M14.5156 2.00933C15.24 0.765957 16.5788 2.4579e-6 18.0277 2.48372e-6L45.9723 0C47.4211 0 48.76.765946 49.4844 2.00932L63.4567 25.9907C64.1811 27.234 64.1811 28.7659 63.4567 30.0093L52.7013 48.4693L49.1892 42.4413L57.6032 28L44.8016 6.02797L19.1984 6.02797L10.8279 20.3947H3.80373L14.5156 2.00933Z"
+        ></path>
+        <path d="M44.8618 49.8686L48.0897 55.4088C47.4628 55.789 46.7327 56 45.9723 56H18.0277C16.5789 56 15.24 55.2341 14.5156 53.9907L.543322 30.0093C.168863 29.3666-.0120378 28.6468.000620907 27.9296L30.3455 27.9294C31.4345 27.9294 32.4404 28.5063 32.9828 29.442L44.8432 49.9007L44.8618 49.8686Z"
+        ></path>
+      </svg>
+      <span class="font-mono text-[0.95rem] font-semibold tracking-tight"
+        >mdxctl</span
+      >
+    </div>
     {
       projects.length === 0 ? (
         <section class="mx-auto max-w-xl py-10 text-center">

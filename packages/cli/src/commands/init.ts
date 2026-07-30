@@ -9,12 +9,11 @@ import { projectSlug, validateProjectName } from "../utils/slug.js";
 import { accent, introChip } from "../utils/tui.js";
 
 const SAMPLE_MDX = `---
-title: Welcome
+title: Welcome to mdxctl
+description: Current work in progress
 ---
 
-# Welcome
-
-mdxctl is still in early development. More coming soon.
+Thanks for trying mdxctl. Unfortunately, you are very early and it's basically unusable right now. Maybe check back in the future!
 `;
 
 const DEFAULT_MDXCTL_DIR = ".mdxctl";

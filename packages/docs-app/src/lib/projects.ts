@@ -1,5 +1,5 @@
 import { getCollection, type CollectionEntry } from "astro:content";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -24,6 +24,12 @@ export interface DocPage {
   entry: DocEntry;
 }
 
+export interface PlanFile {
+  /** Path relative to the project's plan folder, using URL-style separators. */
+  path: string;
+  name: string;
+}
+
 export interface Project {
   /** First URL segment — the registered name, slugified. */
   slug: string;
@@ -34,6 +40,8 @@ export interface Project {
   addedAt?: string;
   /** All docs in this project, home first, then depth-first alphabetical. */
   pages: DocPage[];
+  /** All .mdx files inside the project's plan folder. */
+  planFiles: PlanFile[];
   home?: DocPage;
   /** True when the project comes from ~/.mdxctl/registry.json. */
   registered: boolean;
@@ -119,6 +127,26 @@ function comparePages(a: DocPage, b: DocPage): number {
   return a.segments.length - b.segments.length;
 }
 
+function getPlanFiles(projectPath: string): PlanFile[] {
+  const planRoot = join(projectPath, "plan");
+  if (!existsSync(planRoot)) return [];
+
+  const files: PlanFile[] = [];
+  const visit = (directory: string, segments: string[]) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        visit(join(directory, entry.name), [...segments, entry.name]);
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".mdx")) {
+        const path = [...segments, entry.name].join("/");
+        files.push({ path, name: prettify(entry.name.slice(0, -4)) });
+      }
+    }
+  };
+
+  visit(planRoot, []);
+  return files.sort((a, b) => a.path.localeCompare(b.path));
+}
+
 /**
  * Every project the viewer knows about: registered projects from the CLI
  * registry, plus any docs folder that showed up in the content collection
@@ -150,6 +178,7 @@ export async function getProjects(): Promise<Project[]> {
       path: registered.path,
       addedAt: registered.addedAt,
       pages,
+      planFiles: getPlanFiles(registered.path),
       home: pages.find((page) => page.isHome),
       registered: true,
       linked: pages.length > 0 || existsSync(join(projectsRoot, registered.name)),
@@ -163,6 +192,7 @@ export async function getProjects(): Promise<Project[]> {
       slug,
       name: slug,
       pages,
+      planFiles: [],
       home: pages.find((page) => page.isHome),
       registered: false,
       linked: true,
