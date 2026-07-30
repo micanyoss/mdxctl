@@ -1,30 +1,98 @@
-name: publish
+name: Publish
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Version bump
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
 
 permissions:
-  contents: read
-  id-token: write # npm provenance
+  contents: write
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: npm
+
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - name: Check out main
+        uses: actions/checkout@v4
         with:
-          node-version: 22
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter mdxctl build
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Publish mdxctl to npm
-        run: pnpm --filter mdxctl publish --no-git-checks
+      - name: Verify local version matches npm
+        shell: bash
+        run: |
+          local_version=$(node -p "require('./packages/cli/package.json').version")
+          published_version=$(npm view mdxctl version)
+          if [ "$local_version" != "$published_version" ]; then
+            echo "Local version $local_version does not match npm version $published_version."
+            exit 1
+          fi
+
+      - name: Bump version
+        id: version
+        shell: bash
+        run: |
+          cd packages/cli
+          npm version "${{ inputs.release }}" --no-git-tag-version
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Update lockfile
+        run: pnpm install --lockfile-only
+
+      - name: Validate release
+        run: |
+          pnpm typecheck
+          pnpm build
+          cd packages/cli
+          npm pack --dry-run
+
+      - name: Publish to npm
+        working-directory: packages/cli
+        run: npm publish --access public --provenance=false
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit and tag release
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/cli/package.json pnpm-lock.yaml
+          git commit -m "release mdxctl v${VERSION}"
+          git tag "v${VERSION}"
+          git push origin main "v${VERSION}"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: gh release create "v${VERSION}" --generate-notes --title "mdxctl v${VERSION}"
