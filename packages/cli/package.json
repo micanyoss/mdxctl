@@ -1,6 +1,6 @@
 {
   "name": "mdxctl",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Manage and serve MDX docs projects from one place",
   "repository": {
     "type": "git",
