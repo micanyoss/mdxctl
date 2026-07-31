@@ -1,0 +1,343 @@
+---
+/**
+ * Code block chrome: filename bar, language tag, and a copy button, wrapped
+ * around Shiki's highlighted output.
+ *
+ * Two entry points, and it matters which one you are looking at:
+ *
+ * 1. As the `pre` override. `[...path].astro` passes this component as
+ *    `components={{ pre: CodeBlock }}`, so EVERY fenced code block in every
+ *    doc renders through here — no import required in the .mdx file. The
+ *    highlighted markup arrives through <slot />, and `data-title` / `data-lang`
+ *    arrive as props courtesy of the transformer in lib/shiki-meta.ts.
+ *
+ * 2. Imported explicitly with a `code` prop, for cases where the code is
+ *    computed rather than typed as a fence:
+ *
+ *        import CodeBlock from "@mdxctl/CodeBlock.astro";
+ *        <CodeBlock code={snippet} lang="ts" title="src/cli.ts" />
+ *
+ * Note for future maintainers: path 1 only works while `markdown.optimize`
+ * stays off for MDX (it is off by default — see @astrojs/mdx `index.js`,
+ * `optimize: false`). With it on, rehypeOptimizeStatic collapses the
+ * highlighted tree into a `set:html` blob and component overrides stop firing.
+ */
+import { Code } from "astro:components";
+
+interface Props {
+  /** Only for explicit use. Fences deliver their code through the slot. */
+  code?: string;
+  lang?: string;
+  title?: string;
+  /** Line numbers to highlight, e.g. "2,4-6". Fences use `{2,4-6}` instead. */
+  highlight?: string;
+  /** Soft-wrap long lines instead of scrolling horizontally. */
+  wrap?: boolean;
+  class?: string;
+  "data-title"?: string;
+  "data-lang"?: string;
+  [key: string]: unknown;
+}
+
+const {
+  code,
+  lang,
+  title,
+  highlight,
+  wrap = false,
+  class: className,
+  "data-title": dataTitle,
+  "data-lang": dataLang,
+  ...rest
+} = Astro.props;
+// Fences deliver these as data attributes; explicit usage passes real props.
+const label = title ?? dataTitle;
+const language = lang ?? dataLang;
+const hasHeader = Boolean(label);
+
+// Mirrors astro.config.mjs. Kept in sync by hand because the explicit-`code`
+// path builds its own highlighter rather than going through the markdown
+// pipeline, and a mismatch would show up as differently-coloured blocks.
+const themes = { light: "github-light", dark: "github-dark" } as const;
+
+/** `{2,4-6}` — the same syntax fences accept, rebuilt for the explicit path. */
+const meta = [
+  label ? `title="${label}"` : "",
+  highlight ? `{${highlight}}` : "",
+]
+  .filter(Boolean)
+  .join(" ");
+---
+
+<figure class:list={["code-block", wrap && "code-block--wrap"]} data-code-block>
+  {
+    hasHeader && (
+      <figcaption class="code-block__bar">
+        <span class="code-block__title" title={label}>
+          {label}
+        </span>
+        {language && <span class="code-block__lang">{language}</span>}
+      </figcaption>
+    )
+  }
+
+  <div class="code-block__body">
+    {
+      code ? (
+        <Code
+          code={code}
+          lang={(language ?? "plaintext") as any}
+          themes={themes}
+          defaultColor={false}
+          meta={meta || undefined}
+          wrap={wrap}
+        />
+      ) : (
+        <pre class={className} {...rest}><slot /></pre>
+      )
+    }
+
+    <button
+      type="button"
+      class="code-block__copy"
+      data-code-copy
+      aria-label="Copy code to clipboard"
+    >
+      <svg
+        class="icon-copy size-3.5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <svg
+        class="icon-check hidden size-3.5 text-success"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span class="sr-only" role="status" data-copy-status></span>
+    </button>
+  </div>
+</figure>
+
+<style is:global>
+  /*
+   * Global rather than scoped: the <pre> in the slot is rendered by Shiki
+   * upstream of this component, so it carries no scope hash and a scoped rule
+   * would never reach it.
+   */
+  .code-block {
+    position: relative;
+    margin-bottom: 1.1rem;
+    border: 1px solid color-mix(in oklch, var(--color-base-300) 80%, transparent);
+    border-radius: var(--radius-box);
+    overflow: hidden;
+    background: var(--color-base-100);
+  }
+
+  .code-block__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 1px solid
+      color-mix(in oklch, var(--color-base-300) 80%, transparent);
+    background: color-mix(in oklch, var(--color-base-200) 60%, transparent);
+  }
+
+  .code-block__title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .code-block__lang {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.4;
+  }
+
+  .code-block__body {
+    position: relative;
+  }
+
+  /* Reset the generic .mdx-content pre styling; the figure owns the frame. */
+  .code-block :where(pre) {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0.95rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: auto;
+    scrollbar-color: var(--color-base-300) var(--color-base-200);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    background: transparent;
+  }
+
+  .code-block :where(pre)::-webkit-scrollbar {
+    height: 0.65rem;
+  }
+
+  .code-block :where(pre)::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: var(--color-base-200);
+  }
+
+  .code-block :where(pre)::-webkit-scrollbar-thumb {
+    border: 2px solid var(--color-base-200);
+    border-radius: 999px;
+    background: var(--color-base-300);
+  }
+
+  .code-block :where(pre)::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+  }
+
+  .code-block--wrap :where(pre) {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .code-block :where(pre code) {
+    display: grid;
+    min-width: 100%;
+    width: max-content;
+    padding: 0;
+    background: none;
+    font-size: inherit;
+  }
+
+  .code-block :where(.line) {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 2.25rem 0 1.1rem;
+  }
+
+  .code-block :where(.line--highlighted) {
+    margin: 0;
+    background: color-mix(in oklch, var(--color-primary) 12%, transparent) !important;
+    box-shadow: inset 2px 0 0 var(--color-primary);
+  }
+
+  .code-block__copy {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: grid;
+    place-items: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    cursor: pointer;
+    border-radius: var(--radius-field, 0.4rem);
+    border: 1px solid color-mix(in oklch, var(--color-base-300) 85%, transparent);
+    background: color-mix(in oklch, var(--color-base-100) 88%, transparent);
+    color: var(--color-base-content);
+    opacity: 0;
+    transition:
+      opacity 160ms ease,
+      border-color 160ms ease;
+  }
+
+  /* Keyboard users never hover, so focus has to reveal it too. */
+  .code-block:hover .code-block__copy,
+  .code-block__copy:focus-visible {
+    opacity: 0.85;
+  }
+
+  .code-block__copy:hover {
+    opacity: 1;
+    border-color: var(--color-primary);
+  }
+
+  .code-block__copy:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Touch has no hover state — showing it always is the only usable option. */
+  @media (hover: none) {
+    .code-block__copy {
+      opacity: 0.85;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .code-block__copy {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  async function copy(text: string): Promise<boolean> {
+    try {
+      // Available on https://mdxctl.localhost; the fallback covers plain http.
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const field = document.createElement("textarea");
+      field.value = text;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.opacity = "0";
+      document.body.append(field);
+      field.select();
+      const ok = document.execCommand("copy");
+      field.remove();
+      return ok;
+    }
+  }
+
+  // Delegated so it survives client-side navigation without rebinding, and so
+  // the source of truth is the rendered DOM — no need to thread the raw code
+  // through as an attribute and escape it twice.
+  document.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      "[data-code-copy]",
+    );
+    if (!button) return;
+
+    const block = button.closest("[data-code-block]");
+    const code = block?.querySelector("pre")?.textContent ?? "";
+    if (!code) return;
+
+    if (!(await copy(code))) return;
+
+    const iconCopy = button.querySelector(".icon-copy");
+    const iconCheck = button.querySelector(".icon-check");
+    const status = button.querySelector("[data-copy-status]");
+    iconCopy?.classList.add("hidden");
+    iconCheck?.classList.remove("hidden");
+    if (status) status.textContent = "Copied";
+
+    window.setTimeout(() => {
+      iconCopy?.classList.remove("hidden");
+      iconCheck?.classList.add("hidden");
+      if (status) status.textContent = "";
+    }, 1600);
+  });
+</script>

@@ -56,15 +56,23 @@ const { title, description, markdown } = Astro.props;
           </button>
         </li>
         <li>
-          <button type="button" data-ai-provider="gemini" role="menuitem">
-            <img src="/ai/gemini.svg" alt="" class="size-5 object-contain" />
-            Gemini
-          </button>
-        </li>
-        <li>
           <button type="button" data-ai-provider="t3" role="menuitem">
             <span class="ai-logo ai-logo--t3 size-5" aria-hidden="true"></span>
             T3 Chat
+          </button>
+        </li>
+        <li>
+          <button type="button" data-ai-provider="grok" role="menuitem">
+            <span class="ai-logo ai-logo--grok size-5" aria-hidden="true"></span>
+            Grok
+          </button>
+        </li>
+        <li>
+          <button type="button" data-ai-provider="perplexity" role="menuitem">
+            <span class="provider-logo-slot size-5" aria-hidden="true">
+              <img src="/ai/perplexity.svg" alt="" class="provider-logo provider-logo--perplexity" />
+            </span>
+            Perplexity
           </button>
         </li>
       </ul>
@@ -92,6 +100,8 @@ const { title, description, markdown } = Astro.props;
   .doc-ai-menu {
     margin-bottom: 0 !important;
     padding: 0.25rem !important;
+    max-height: min(24rem, calc(100dvh - 9rem));
+    overflow-y: auto;
     list-style: none !important;
     opacity: 0;
     transform: translateY(-0.3rem) scale(0.98);
@@ -133,6 +143,26 @@ const { title, description, markdown } = Astro.props;
     }
   }
 
+  .provider-logo-slot {
+    position: relative;
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+  }
+
+  .provider-logo {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: contain;
+  }
+
+  .provider-logo--perplexity {
+    width: 1.3rem;
+    height: 1.3rem;
+    transform: translateX(0.04rem);
+  }
+
   .ai-logo {
     display: inline-block;
     flex: none;
@@ -145,12 +175,20 @@ const { title, description, markdown } = Astro.props;
     background-image: url("/ai/openai-light.svg");
   }
 
+  .ai-logo--grok {
+    background-image: url("/ai/grok-light.svg");
+  }
+
   .ai-logo--t3 {
     background-image: url("/ai/t3-light.svg");
   }
 
   :global([data-theme="mdxctl-dark"]) .ai-logo--chatgpt {
     background-image: url("/ai/openai-dark.svg");
+  }
+
+  :global([data-theme="mdxctl-dark"]) .ai-logo--grok {
+    background-image: url("/ai/grok-dark.svg");
   }
 
   :global([data-theme="mdxctl-dark"]) .ai-logo--t3 {
@@ -163,8 +201,10 @@ const { title, description, markdown } = Astro.props;
   const providerUrls: Record<string, (prompt: string) => string> = {
     chatgpt: (prompt) => `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`,
     claude: (prompt) => `https://claude.ai/new?q=${encodeURIComponent(prompt)}`,
-    gemini: (prompt) => `https://gemini.google.com/app?text=${encodeURIComponent(prompt)}`,
     t3: (prompt) => `https://t3.chat/new?q=${encodeURIComponent(prompt)}`,
+    grok: (prompt) => `https://grok.com/?q=${encodeURIComponent(prompt)}`,
+    perplexity: (prompt) =>
+      `https://www.perplexity.ai/search?q=${encodeURIComponent(prompt)}`,
   };
 
   function markdownFor(container: HTMLElement): string {
@@ -198,7 +238,8 @@ const { title, description, markdown } = Astro.props;
 
     const providerButton = target?.closest<HTMLButtonElement>("[data-ai-provider]");
     if (!providerButton) return;
-    const makeUrl = providerUrls[providerButton.dataset.aiProvider ?? ""];
+    const provider = providerButton.dataset.aiProvider ?? "";
+    const makeUrl = providerUrls[provider];
     if (!makeUrl) return;
 
     const prompt = `"${markdownFor(container)}"${questionSuffix}`;

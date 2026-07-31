@@ -182,6 +182,11 @@
   background: color-mix(in oklch, var(--color-base-300) 70%, transparent);
 }
 
+.mdx-content .callout-content :where(code) {
+  background: color-mix(in oklch, currentColor 12%, transparent);
+  color: inherit;
+}
+
 /*
  * Project card badges. Light mode keeps the solid wash it always had; dark mode
  * flips to a tinted surface with the *bright* hue as the text, because dark
@@ -241,43 +246,50 @@
 /* --------------------------------------------------------------------------
    App shell
 
-   Everything lives in one centred max-width shell. The rail is the shell's left
-   column, so the gap to its left is simply the centring margin — it is not a
-   floating panel. The rail itself is fixed and full height so its hairline runs
-   edge to edge of the viewport while the page scrolls.
+   The desktop shell is planned as three columns: a left navigation rail, a
+   wider reading column, and a matching right rail reserved for a future TOC.
+   Equal gaps on either side of the article keep the content visually centred.
 
    Below `lg` the rail becomes an off-canvas drawer and content runs full width.
    -------------------------------------------------------------------------- */
 :root {
-  --shell-max: 90rem;
-  --sidebar-w: 16rem;
+  --shell-max: 100rem;
+  --sidebar-w: 15rem;
+  --rail-gap: 3rem;
+  --content-max: 58rem;
   /* Distance from the viewport edge to the rail. 0 until the shell is capped. */
   --sidebar-inset: 0px;
 }
 
 @media (min-width: 64rem) {
   :root {
-    --sidebar-inset: max(0px, calc((100vw - var(--shell-max)) / 2));
+    --sidebar-inset: max(1rem, calc((100vw - var(--shell-max)) / 2));
   }
 
-  /* Mirrors the left inset on the right so the shell reads symmetrical. */
   .has-sidebar {
     padding-left: calc(var(--sidebar-inset) + var(--sidebar-w));
     padding-right: var(--sidebar-inset);
   }
 }
 
-/* Reading column, centred in the space the rail leaves. */
+/* At wide desktop sizes, reserve an equal right rail for the future TOC. */
+@media (min-width: 80rem) {
+  .has-sidebar {
+    padding-left: calc(var(--sidebar-inset) + var(--sidebar-w) + var(--rail-gap));
+    padding-right: calc(var(--sidebar-inset) + var(--sidebar-w) + var(--rail-gap));
+  }
+}
+
 .content-column {
   width: 100%;
-  max-width: 70rem;
+  max-width: var(--content-max);
   margin-inline: auto;
   padding-inline: 1.25rem;
 }
 
 @media (min-width: 64rem) {
   .content-column {
-    padding-inline: 2.5rem;
+    padding-inline: 2rem;
   }
 }
 
@@ -357,6 +369,48 @@
 .mdx-content :where(li) {
   margin-bottom: 0.3rem;
 }
+.mdx-content :where(.contains-task-list) {
+  padding-left: 0;
+  list-style: none;
+}
+.mdx-content :where(.task-list-item) {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  list-style: none;
+}
+.mdx-content :where(.task-list-item input[type="checkbox"]) {
+  display: inline-grid;
+  place-content: center;
+  appearance: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: 0 0 0.9rem;
+  margin: 0;
+  padding: 0.14rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 0.28rem;
+  background: transparent;
+  color: var(--color-primary-content);
+  vertical-align: middle;
+  opacity: 1;
+}
+.mdx-content :where(.task-list-item input[type="checkbox"])::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.28rem;
+  border-left: 0.12rem solid currentColor;
+  border-bottom: 0.12rem solid currentColor;
+  opacity: 0;
+  transform: translateY(-0.06rem) rotate(-45deg) scale(0.7);
+}
+.mdx-content :where(.task-list-item input[type="checkbox"]:checked) {
+  background: var(--color-primary);
+}
+.mdx-content :where(.task-list-item input[type="checkbox"]:checked)::before {
+  opacity: 1;
+  transform: translateY(-0.06rem) rotate(-45deg) scale(1);
+}
 .mdx-content :where(a) {
   color: var(--color-primary);
   text-decoration: underline;
@@ -415,3 +469,52 @@
 .mdx-content :where(img) {
   border-radius: var(--radius-box);
 }
+
+/* --------------------------------------------------------------------------
+   Shiki dual themes
+
+   `defaultColor: false` (astro.config.mjs) makes Shiki emit both palettes as
+   custom properties per token — --shiki-light / --shiki-dark — and no concrete
+   `color`. These two rules pick the palette matching the active theme, so the
+   header toggle recolours code instantly with no flash and no re-highlighting.
+
+   Astro rewrites Shiki's own `.shiki` class to `.astro-code`, so that is the
+   selector that actually matches; `.shiki` is kept alongside it in case a doc
+   renders Shiki output through some other path. Without these rules code
+   renders as uncoloured text — load-bearing, not cosmetic.
+   -------------------------------------------------------------------------- */
+.mdx-content :where(.astro-code, .shiki),
+.mdx-content :where(.astro-code, .shiki) :where(span) {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+
+[data-theme="mdxctl-dark"] .mdx-content :where(.astro-code, .shiki),
+[data-theme="mdxctl-dark"] .mdx-content :where(.astro-code, .shiki) :where(span) {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+
+/* Shiki may expose its theme background through inline variables or line
+   wrappers. Keep all non-highlighted rows transparent so only the figure
+   surface and explicit highlight rule paint the block. */
+.mdx-content :where(.code-block .astro-code, .code-block .shiki),
+.mdx-content :where(.code-block .astro-code, .code-block .shiki) :where(code, .line, span) {
+  background-color: transparent !important;
+}
+.mdx-content :where(.code-block .line--highlighted) {
+  background: color-mix(in oklch, var(--color-primary) 12%, transparent) !important;
+}
+
+/*
+ * The <figure> owns the frame, so the generic dark-mode pre outline from
+ * further up would double the border on every fenced block.
+ */
+[data-theme="mdxctl-dark"] .mdx-content :where(.code-block pre) {
+  border: 0;
+}
+

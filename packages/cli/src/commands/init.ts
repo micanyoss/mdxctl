@@ -4,6 +4,7 @@ import * as p from "@clack/prompts";
 import { defineCommand } from "citty";
 import pc from "picocolors";
 import { addProject, getProject } from "../registry.js";
+import { writeDocsTypes } from "../utils/docsTypes.js";
 import { unwrap } from "../utils/prompts.js";
 import { projectSlug, validateProjectName } from "../utils/slug.js";
 import { accent, introChip } from "../utils/tui.js";
@@ -93,6 +94,13 @@ export default defineCommand({
     if (!existsSync(samplePath)) {
       writeFileSync(samplePath, SAMPLE_MDX, "utf8");
       p.log.info(`Wrote sample doc ${pc.dim(samplePath)}`);
+    }
+
+    // Editor support for the .mdx files here — component autocomplete without
+    // the folder needing any node_modules of its own.
+    const types = writeDocsTypes(mdxctlPath);
+    if (types.written.length) {
+      p.log.info(`Wrote editor types ${pc.dim(join(mdxctlPath, "mdxctl-env.d.ts"))}`);
     }
 
     const entry = addProject(name, mdxctlPath);

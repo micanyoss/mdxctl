@@ -3,6 +3,7 @@ import { render } from "astro:content";
 import Layout from "../layouts/Layout.astro";
 import Sidebar from "../components/Sidebar.astro";
 import DocHeader from "../components/DocHeader.astro";
+import CodeBlock from "../components/CodeBlock.astro";
 import { getProjects, shortenPath, type DocPage, type Project } from "../lib/projects";
 
 /**
@@ -81,7 +82,14 @@ const title = page
               description={page.description}
               markdown={markdown}
             />
-            <Content />
+            {/*
+              Every fenced code block in every doc routes through CodeBlock,
+              with no import in the .mdx file. Authors get the filename bar,
+              copy button and line highlighting from fence meta alone:
+
+                  ```ts title="src/cli.ts" {2-3}
+            */}
+            <Content components={{ pre: CodeBlock }} />
           </article>
         ) : project.pages.length > 0 ? (
           <section>

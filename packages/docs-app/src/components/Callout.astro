@@ -13,8 +13,57 @@ const variant: Record<NonNullable<Props["type"]>, string> = {
 };
 ---
 
-<div class:list={["alert my-4", variant[type]]} role="alert">
-  <div>
+<div class:list={["alert alert-soft my-4", variant[type]]} role="alert">
+  <div class="callout-content">
     <slot />
   </div>
 </div>
+
+<style is:global>
+  /* MDX gives paragraphs and lists their own rhythm; the alert owns its edge. */
+  .callout-content > :first-child {
+    margin-top: 0;
+  }
+
+  .callout-content > :last-child,
+  .callout-content > :last-child > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Keep inline code readable against every alert tint and theme. */
+  .callout-content :where(code) {
+    background: color-mix(in oklch, currentColor 12%, transparent);
+    color: inherit;
+  }
+
+  .callout-content :where(a) {
+    color: inherit;
+    font-weight: 650;
+  }
+
+  /* Keep the semantic hue explicit in light mode. The soft alert rule uses
+     `--alert-color` as ink, but the stronger surface mix should not alter it. */
+  [data-theme="mdxctl"] .alert-soft.alert-info {
+    color: oklch(39% 0.12 245);
+    background: oklch(92.5% 0.035 245);
+    border-color: oklch(82% 0.075 245);
+  }
+
+  [data-theme="mdxctl"] .alert-soft.alert-success {
+    color: oklch(35% 0.12 152);
+    background: oklch(92.5% 0.04 152);
+    border-color: oklch(82% 0.075 152);
+  }
+
+  [data-theme="mdxctl"] .alert-soft.alert-warning {
+    color: oklch(34% 0.11 58);
+    background: oklch(93% 0.055 82);
+    border-color: oklch(82% 0.1 78);
+  }
+
+  [data-theme="mdxctl"] .alert-soft.alert-error {
+    color: oklch(38% 0.17 25);
+    background: oklch(92% 0.045 25);
+    border-color: oklch(78% 0.1 25);
+  }
+</style>

@@ -16,6 +16,7 @@ import {
   type ProjectEntry,
 } from "../registry.js";
 import { BootScreen } from "../utils/bootscreen.js";
+import { writeDocsTypes } from "../utils/docsTypes.js";
 import {
   linkProjectsIntoApp,
   resolveAstroBin,
@@ -227,6 +228,14 @@ export default defineCommand({
           docsPath: docsPathOf(project),
         })),
       );
+
+      // Refresh editor types for every served project, so a project registered
+      // before this feature existed (or before the last upgrade) picks up the
+      // current component props without needing to re-init.
+      for (const project of projects) {
+        writeDocsTypes(project.path);
+      }
+
       const env = { ...options.env, MDXCTL_PROJECTS_PATH: projectsBase };
 
       const run = runServer(options.command, options.commandArgs, {

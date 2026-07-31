@@ -3,7 +3,7 @@ title: Welcome
 description: Sample doc rendered by the mdxctl docs viewer
 ---
 
-import Callout from "@components/Callout.astro";
+import Callout from "@mdxctl/Callout.astro";
 
 # Welcome to mdxctl
 
@@ -16,6 +16,27 @@ project.
   Edit this MDX file while the dev server is running and the page reloads
   instantly.
 </Callout>
+
+## Code blocks
+
+A plain fence needs no import at all:
+
+```ts
+const greeting: string = "hello";
+console.log(greeting);
+```
+
+Add a filename and highlight specific lines with fence metadata:
+
+```ts title="src/cli.ts" {2,4-5}
+import { defineCommand } from "citty";
+const command = defineCommand({ meta: { name: "start" } });
+// line 3 is not highlighted
+const a = 1;
+const b = 2;
+```
+
+Inline `code` should stay untouched.
 
 ## What's next
 
