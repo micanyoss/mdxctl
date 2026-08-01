@@ -54,6 +54,21 @@ const docsFolder = project.path
 const title = page
   ? `${page.title} · ${project.name}`
   : `${project.name} · mdxctl`;
+const breadcrumbs = page
+  ? [
+      { label: project.slug, href: `/${project.slug}` },
+      ...page.segments.map((segment, index) => {
+        const id = [project.slug, ...page.segments.slice(0, index + 1)].join("/");
+        const target = project.pages.find((candidate) => candidate.id === id);
+        return {
+          label: target?.title ?? segment.replace(/[-_]+/g, " ").replace(/^\w/, (letter) => letter.toUpperCase()),
+          // A directory without an index has no route of its own. Keep the
+          // crumb interactive by taking it to its first page.
+          href: target?.url ?? project.pages.find((candidate) => candidate.id.startsWith(`${id}/`))?.url ?? page.url,
+        };
+      }),
+    ]
+  : [];
 ---
 
 <Layout title={title} description={page?.description} sidebar>
@@ -67,9 +82,17 @@ const title = page
   <div class="content-column pt-14 pb-16 lg:pt-11">
     {
       page && !page.isHome && (
-        <p class="mb-4 truncate font-mono text-[0.7rem] tracking-wide opacity-45">
-          {[project.name, ...page.segments].join(" / ")}
-        </p>
+        <div class="breadcrumbs mb-4 overflow-x-auto font-mono text-[0.7rem] tracking-wide opacity-55" aria-label="Breadcrumb">
+          <ul>
+            {breadcrumbs.map((crumb, index) => (
+              <li>
+                <a href={crumb.href} aria-current={index === breadcrumbs.length - 1 ? "page" : undefined}>
+                  {crumb.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )
     }
 

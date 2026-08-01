@@ -19,7 +19,9 @@ export interface DocPage {
   description?: string;
   /** Path segments below the project root ([] for the project home page). */
   segments: string[];
-  /** True for the project's index.mdx. */
+  /** True for any index.mdx, including an index inside a nested folder. */
+  isIndex: boolean;
+  /** True for the project's root index.mdx. */
   isHome: boolean;
   entry: DocEntry;
 }
@@ -96,7 +98,14 @@ function prettify(segment: string): string {
 function toPage(entry: DocEntry, projectSlug: string): DocPage {
   const rest = entry.id === projectSlug ? "" : entry.id.slice(projectSlug.length + 1);
   const segments = rest ? rest.split("/") : [];
-  const isHome = segments.length === 0;
+  // Astro collapses every index.mdx ID to its containing directory, so a
+  // nested `test/index.mdx` arrives as `<project>/test`, not
+  // `<project>/test/index`. Check the linked source tree as well as Astro's
+  // optional filePath metadata, which is not retained in every runtime mode.
+  const sourceSaysIndex = entry.filePath?.replaceAll("\\", "/").endsWith("/index.mdx") ?? false;
+  const indexPath = join(projectsRoot, projectSlug, ...segments, "index.mdx");
+  const isIndex = sourceSaysIndex || existsSync(indexPath);
+  const isHome = isIndex && segments.length === 0;
   return {
     id: entry.id,
     url: `/${entry.id}`,
@@ -105,6 +114,7 @@ function toPage(entry: DocEntry, projectSlug: string): DocPage {
       (isHome ? "Overview" : prettify(segments[segments.length - 1])),
     description: entry.data.description,
     segments,
+    isIndex,
     isHome,
     entry,
   };
@@ -215,6 +225,8 @@ export function shortenPath(path: string, keep = 3): string {
 }
 
 export interface NavNode {
+  /** Stable path used to preserve this folder's expanded state. */
+  key: string;
   label: string;
   page?: DocPage;
   children: NavNode[];
@@ -227,19 +239,33 @@ export function buildNav(pages: DocPage[]): NavNode[] {
 
   for (const page of pages) {
     if (page.isHome) continue;
+    const pageSegments = page.segments;
+    // Astro removes "index" from collection IDs. For a nested index page,
+    // all remaining segments identify the directory that owns the page.
+    const isFolderIndex = page.isIndex;
+    const folderSegments = isFolderIndex ? pageSegments : pageSegments.slice(0, -1);
     let level = roots;
     let prefix = "";
-    for (const segment of page.segments.slice(0, -1)) {
+    for (const segment of folderSegments) {
       prefix = prefix ? `${prefix}/${segment}` : segment;
       let node = folders.get(prefix);
       if (!node) {
-        node = { label: prettify(segment), children: [] };
+        node = { key: prefix, label: prettify(segment), children: [] };
         folders.set(prefix, node);
         level.push(node);
       }
       level = node.children;
     }
-    level.push({ label: page.title, page, children: [] });
+
+    if (isFolderIndex && folderSegments.length > 0) {
+      const folder = folders.get(folderSegments.join("/"));
+      if (folder) {
+        folder.label = page.title;
+        folder.page = page;
+      }
+    } else {
+      level.push({ key: page.segments.join("/"), label: page.title, page, children: [] });
+    }
   }
 
   return roots;

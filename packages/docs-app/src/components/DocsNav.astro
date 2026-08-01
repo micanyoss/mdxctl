@@ -8,35 +8,102 @@ interface Props {
 }
 
 const { nodes, currentId, depth = 0 } = Astro.props;
+const containsCurrent = (node: NavNode): boolean =>
+  node.page?.id === currentId || node.children.some(containsCurrent);
 ---
 
 <ul class:list={["space-y-0.5", depth > 0 && "mt-0.5 ml-3 border-l rule pl-3"]}>
   {
-    nodes.map((node) =>
-      node.page ? (
-        <li>
-          <a
-            href={node.page.url}
-            aria-current={node.page.id === currentId ? "page" : undefined}
-            class:list={[
-              "block truncate rounded-field px-2.5 py-1.5 text-sm transition",
-              node.page.id === currentId
-                ? "bg-primary/12 font-medium text-primary"
-                : "opacity-70 hover:bg-base-200 hover:opacity-100",
-            ]}
-            title={node.label}
-          >
-            {node.label}
-          </a>
+    nodes.map((node) => {
+      const expanded = containsCurrent(node);
+      return node.page ? (
+        <li data-nav-folder data-nav-key={node.key} class:list={[expanded && "is-expanded"]}>
+          <div class:list={["flex items-center rounded-field transition", node.page.id === currentId ? "bg-primary/12 font-medium text-primary" : "opacity-70 hover:bg-base-200 hover:opacity-100"]}>
+            <a
+              href={node.page.url}
+              aria-current={node.page.id === currentId ? "page" : undefined}
+              class="min-w-0 flex-1 truncate px-2.5 py-1.5 text-sm"
+              title={node.label}
+            >{node.label}</a>
+            {node.children.length > 0 && <button type="button" class:list={["nav-chevron", node.page.id === currentId && "nav-chevron--active"]} data-nav-toggle aria-expanded={String(expanded)} aria-label={`${expanded ? "Collapse" : "Expand"} ${node.label}`}><span aria-hidden="true">›</span></button>}
+          </div>
+          {node.children.length > 0 && <div data-nav-children hidden={!expanded}><Astro.self nodes={node.children} currentId={currentId} depth={depth + 1} /></div>}
         </li>
-      ) : (
-        <li class="pt-2.5">
-          <p class="px-2.5 pb-0.5 font-mono text-[0.68rem] tracking-widest uppercase opacity-40">
-            {node.label}
-          </p>
-          <Astro.self nodes={node.children} currentId={currentId} depth={depth + 1} />
+      ) : node.children.length > 0 ? (
+        <li data-nav-folder data-nav-key={node.key} class:list={[expanded && "is-expanded"]}>
+          <button type="button" class="flex w-full items-center rounded-field text-left text-sm opacity-70 transition hover:bg-base-200 hover:opacity-100" data-nav-toggle aria-expanded={String(expanded)}>
+            <span class="min-w-0 flex-1 truncate px-2.5 py-1.5">{node.label}</span><span class="nav-chevron" aria-hidden="true">›</span>
+          </button>
+          <div data-nav-children hidden={!expanded}><Astro.self nodes={node.children} currentId={currentId} depth={depth + 1} /></div>
         </li>
-      ),
-    )
+      ) : null;
+    })
   }
 </ul>
+
+<script>
+  const storageKey = `mdxctl:nav:${location.pathname.split("/")[1] ?? ""}`;
+
+  function storedFolders(): Set<string> {
+    try { return new Set(JSON.parse(sessionStorage.getItem(storageKey) ?? "[]")); }
+    catch { return new Set(); }
+  }
+
+  function restoreFolders() {
+    const open = storedFolders();
+    for (const folder of document.querySelectorAll<HTMLElement>("[data-nav-folder]")) {
+      const key = folder.dataset.navKey;
+      const toggle = folder.querySelector<HTMLElement>(":scope > div > [data-nav-toggle], :scope > [data-nav-toggle]");
+      const children = folder.querySelector<HTMLElement>(":scope > [data-nav-children]");
+      if (!key || !toggle || !children || (!open.has(key) && toggle.getAttribute("aria-expanded") !== "true")) continue;
+      toggle.setAttribute("aria-expanded", "true");
+      children.hidden = false;
+      folder.classList.add("is-expanded");
+      open.add(key);
+    }
+    sessionStorage.setItem(storageKey, JSON.stringify([...open]));
+  }
+
+  restoreFolders();
+  document.addEventListener("astro:page-load", restoreFolders);
+
+  document.addEventListener("click", (event) => {
+    const toggle = (event.target as Element).closest<HTMLElement>("[data-nav-toggle]");
+    if (!toggle) return;
+    const folder = toggle.closest<HTMLElement>("[data-nav-folder]");
+    const children = folder?.querySelector<HTMLElement>(":scope > [data-nav-children]");
+    if (!children) return;
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    children.hidden = expanded;
+    folder?.classList.toggle("is-expanded", !expanded);
+
+    const key = folder?.dataset.navKey;
+    if (key) {
+      const open = storedFolders();
+      if (expanded) open.delete(key);
+      else open.add(key);
+      sessionStorage.setItem(storageKey, JSON.stringify([...open]));
+    }
+  });
+</script>
+
+<style>
+  .nav-chevron {
+    display: grid;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-right: 0.25rem;
+    flex: none;
+    place-items: center;
+    border-radius: var(--radius-field);
+    opacity: 0.55;
+    transition: background-color 150ms, opacity 150ms;
+  }
+
+  .nav-chevron:hover { background: var(--color-base-200); opacity: 1; }
+  .nav-chevron--active { color: var(--color-primary); opacity: 1; }
+  .nav-chevron span { font-size: 1.15rem; line-height: 1; transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .is-expanded > div > .nav-chevron span,
+  .is-expanded > button > .nav-chevron { transform: rotate(90deg); }
+</style>
